@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Setup Virtual Environment",
+            "type": "shell",
+            "command": "python -m venv .venv ; .\\.venv\\Scripts\\python.exe -m pip install --upgrade pip ; .\\.venv\\Scripts\\python.exe -m pip install -e .",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Build Docker Image",
+            "type": "shell",
+            "command": "docker build -t copilot-proxy .",
+            "problemMatcher": [],
+            "group": "build"
+        }
+    ]
+}

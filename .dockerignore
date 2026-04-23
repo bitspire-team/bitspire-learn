@@ -1,0 +1,6 @@
+﻿# Ignore everything in the directory by default
+*
+
+# Explicitly include only the application script and dependencies file
+!proxy.py
+!pyproject.toml
