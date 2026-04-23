@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import os
 import uuid
@@ -96,6 +96,10 @@ def parse_as_sse(body_bytes: bytes) -> Any:
 
 @app.middleware("http")
 async def logging_and_dumping_middleware(request: Request, call_next):
+    # Skip logging and payload dumping for liveness and health checks.
+    if request.url.path in ["/live", "/health"]:
+        return await call_next(request)
+
     req_uuid = str(uuid.uuid4())
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     payload_file_path = os.path.join("requests", f"{timestamp}_{req_uuid}.json")
@@ -163,14 +167,16 @@ async def is_alive() -> dict:
 
 
 @app.get("/health")
-async def health_check() -> dict:
+async def is_healthy() -> dict:
     logger.info("Received a health check request.")
     try:
         requests_count = len(os.listdir("requests"))
         logger.info(f"Counted {requests_count} items in the requests directory.")
         return {"status": "healthy", "requests_count": requests_count}
     except Exception as error:
-        logger.error(f"Failed to count items in the requests directory during health check: {error}")
+        logger.error(
+            f"Failed to count items in the requests directory during health check: {error}"
+        )
         return {"status": "unhealthy", "error": str(error)}
 
 
