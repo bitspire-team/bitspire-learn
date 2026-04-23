@@ -156,6 +156,24 @@ async def logging_and_dumping_middleware(request: Request, call_next):
     )
 
 
+@app.get("/live")
+async def is_alive() -> dict:
+    logger.info("Received a liveness probe request.")
+    return {"status": "alive"}
+
+
+@app.get("/health")
+async def health_check() -> dict:
+    logger.info("Received a health check request.")
+    try:
+        requests_count = len(os.listdir("requests"))
+        logger.info(f"Counted {requests_count} items in the requests directory.")
+        return {"status": "healthy", "requests_count": requests_count}
+    except Exception as error:
+        logger.error(f"Failed to count items in the requests directory during health check: {error}")
+        return {"status": "unhealthy", "error": str(error)}
+
+
 @app.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
 )
