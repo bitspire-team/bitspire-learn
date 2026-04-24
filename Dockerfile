@@ -4,12 +4,10 @@ WORKDIR /app
 
 # Copy dependency files
 COPY pyproject.toml .
+RUN pip install --no-cache-dir uv && uv pip install --system --no-cache -r pyproject.toml
 
-# Install dependencies from pyproject.toml
-RUN pip install --no-cache-dir .
-
-# Copy application code
-COPY src/ src/
+# Copy application source code
+COPY src/ /app/src/
 
 # Expose port 8080 as configured in proxy.py
 EXPOSE 8080
