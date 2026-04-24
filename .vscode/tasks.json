@@ -9,11 +9,32 @@
             "group": "build"
         },
         {
+            "label": "Run Proxy",
+            "type": "shell",
+            "command": ".\\.venv\\Scripts\\python.exe proxy.py",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Run UI",
+            "type": "shell",
+            "command": ".\\.venv\\Scripts\\python.exe ui.py",
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Test Proxy",
+            "type": "shell",
+            "command": ".\\.venv\\Scripts\\python.exe -m pytest tests/test_proxy.py",
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
             "label": "Build Docker Image",
             "type": "shell",
             "command": "docker build -t copilot-proxy .",
             "problemMatcher": [],
             "group": "build"
-        }
+        },
     ]
 }

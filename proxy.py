@@ -46,7 +46,7 @@ RESTRICTED_HEADERS = {
     "host",
 }
 
-upstream_client = httpx.AsyncClient(timeout=30.0)
+upstream_client = httpx.AsyncClient(timeout=30.0, http2=True)
 
 
 @asynccontextmanager
@@ -180,9 +180,7 @@ async def is_healthy() -> dict:
         return {"status": "unhealthy", "error": str(error)}
 
 
-@app.api_route(
-    "/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
-)
+@app.api_route("/{path:path}", methods=["GET", "POST"])
 async def forward_http_request(path: str, request: Request) -> Response:
     logger.info(f"Received a request for {request.method} {path}")
 
@@ -200,7 +198,7 @@ async def forward_http_request(path: str, request: Request) -> Response:
             method=request.method,
             url=target_url,
             headers=outbound_headers,
-            content=body if body else None,
+            content=body,
         )
         logger.info(f"Completed a request for {request.method} {request.url.path}")
 

@@ -8,7 +8,7 @@ version = "0.1.0"
 dependencies = [
     "fastapi",
     "uvicorn",
-    "httpx",
+    "httpx[http2]",
     "pandas",
     "streamlit",
     "sseclient-py",
@@ -16,3 +16,6 @@ dependencies = [
 
 [tool.setuptools]
 py-modules = ["proxy", "ui"]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio"]
