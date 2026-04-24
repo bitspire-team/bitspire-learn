@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["proxy", "ui"]
+packages = ["src"]
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-asyncio"]

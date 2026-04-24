@@ -3,14 +3,14 @@ from unittest.mock import AsyncMock, patch
 from fastapi import Request, Response
 import httpx
 
-from proxy import forward_http_request
+from src.proxy import forward_http_request
 
 SCOPE_BASE = {"type": "http", "server": ("localhost", 8080)}
 
 
 class TestForwardHttpRequest:
     @pytest.mark.asyncio
-    @patch("proxy.upstream_client.request", new_callable=AsyncMock)
+    @patch("src.proxy.upstream_client.request", new_callable=AsyncMock)
     async def test_forwarding_get_requests(self, mock_upstream):
         request = Request(
             scope={
@@ -43,7 +43,7 @@ class TestForwardHttpRequest:
         assert response.media_type == "application/json"
 
     @pytest.mark.asyncio
-    @patch("proxy.upstream_client.request", new_callable=AsyncMock)
+    @patch("src.proxy.upstream_client.request", new_callable=AsyncMock)
     async def test_forwarding_post_requests_with_payload(self, mock_upstream):
         payload = b'{"prompt": "hello world"}'
         request = Request(
@@ -76,7 +76,7 @@ class TestForwardHttpRequest:
         assert response.body == b'{"id": "cmpl-123"}'
 
     @pytest.mark.asyncio
-    @patch("proxy.upstream_client.request", new_callable=AsyncMock)
+    @patch("src.proxy.upstream_client.request", new_callable=AsyncMock)
     async def test_forwarding_post_requests_with_streaming_response(
         self, mock_upstream
     ):
@@ -113,7 +113,7 @@ class TestForwardHttpRequest:
         assert response.media_type == "text/event-stream"
 
     @pytest.mark.asyncio
-    @patch("proxy.upstream_client.request", new_callable=AsyncMock)
+    @patch("src.proxy.upstream_client.request", new_callable=AsyncMock)
     async def test_exception_handling(self, mock_upstream):
         request = Request(
             scope={

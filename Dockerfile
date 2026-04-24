@@ -9,10 +9,10 @@ COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 
 # Copy application code
-COPY . .
+COPY src/ src/
 
 # Expose port 8080 as configured in proxy.py
 EXPOSE 8080
 
 # Run the proxy application
-CMD ["python", "proxy.py"]
+CMD ["python", "src/proxy.py"]

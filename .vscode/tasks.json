@@ -11,14 +11,14 @@
         {
             "label": "Run Proxy",
             "type": "shell",
-            "command": ".\\.venv\\Scripts\\python.exe proxy.py",
+            "command": ".\\.venv\\Scripts\\python.exe src\\proxy.py",
             "problemMatcher": [],
             "group": "build"
         },
         {
             "label": "Run UI",
             "type": "shell",
-            "command": ".\\.venv\\Scripts\\python.exe ui.py",
+            "command": ".\\.venv\\Scripts\\python.exe src\\ui.py",
             "problemMatcher": [],
             "group": "build"
         },
