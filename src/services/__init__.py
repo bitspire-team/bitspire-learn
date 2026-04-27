@@ -1,4 +1,4 @@
 from src.services.logging import LoggingService
-from src.services.user_resolution import UserResolutionService
+from src.services.request_insight import RequestInsightService
 
-__all__ = ["LoggingService", "UserResolutionService"]
+__all__ = ["LoggingService", "RequestInsightService"]

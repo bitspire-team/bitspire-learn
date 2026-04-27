@@ -16,6 +16,9 @@ Base = declarative_base()
 
 async def init_db() -> None:
     logger.info("Initializing the database and creating tables if needed.")
+    # Import all models so their tables are registered on Base.metadata before create_all.
+    import src.models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialization completed successfully.")

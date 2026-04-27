@@ -20,3 +20,9 @@ class BaseRepository(Generic[ModelType]):
         self.session.add(obj)
         await self.session.commit()
         return obj
+
+    async def update(self, entity: ModelType, **kwargs) -> ModelType:
+        for key, value in kwargs.items():
+            setattr(entity, key, value)
+        await self.session.commit()
+        return entity

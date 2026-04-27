@@ -12,6 +12,4 @@ class User(Base):
     name = Column(String, nullable=True)
     email = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    machine_id = Column(String, index=True, nullable=True)
-    first_seen_at = Column(DateTime)
-    last_seen_at = Column(DateTime)
+    created_on = Column(DateTime)

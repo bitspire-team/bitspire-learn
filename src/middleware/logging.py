@@ -5,7 +5,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.db import AsyncSessionLocal
 from src.repositories import RequestLogRepository, ResponseLogRepository
+from src.repositories.prompt import PromptRepository
+from src.repositories.route import RouteRepository
+from src.repositories.user import UserRepository
 from src.services import LoggingService
+from src.services.request_insight import RequestInsightService
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +21,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 request_repo=RequestLogRepository(session),
                 response_repo=ResponseLogRepository(session),
             )
-            await service.log_request(request)
-
+            request_log = await service.log_request(request)
             response = await call_next(request)
-            reconstructed = await service.log_response(request, response)
+            response_log = await service.log_response(request, response)
 
-            return reconstructed
+            insight_service = RequestInsightService(
+                route_repo=RouteRepository(session),
+                user_repo=UserRepository(session),
+                prompt_repo=PromptRepository(session),
+            )
+            await insight_service.extract_and_store(request_log, response_log)
+
+            return response
