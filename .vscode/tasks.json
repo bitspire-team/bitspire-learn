@@ -11,14 +11,14 @@
         {
             "label": "Run Proxy",
             "type": "shell",
-            "command": ".\\.venv\\Scripts\\python.exe src\\proxy.py",
+            "command": ".\\.venv\\Scripts\\python.exe -m uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload",
             "problemMatcher": [],
             "group": "build"
         },
         {
             "label": "Run UI",
             "type": "shell",
-            "command": ".\\.venv\\Scripts\\python.exe src\\ui.py",
+            "command": ".\\.venv\\Scripts\\python.exe ui.py",
             "problemMatcher": [],
             "group": "build"
         },

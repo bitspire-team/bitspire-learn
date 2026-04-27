@@ -12,10 +12,17 @@ dependencies = [
     "pandas",
     "streamlit",
     "sseclient-py",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "asyncpg",
+    "aiosqlite",
+    "python-dotenv",
+    "pydantic-settings",
 ]
 
-[tool.setuptools]
-packages = ["src"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-asyncio"]

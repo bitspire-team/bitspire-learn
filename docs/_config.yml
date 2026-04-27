@@ -1,0 +1,13 @@
+title: Copilot Proxy
+description: Documentation for the Copilot Proxy project
+remote_theme: just-the-docs/just-the-docs@v0.10.1
+plugins:
+  - jekyll-remote-theme
+
+color_scheme: dark
+
+mermaid:
+  version: "11"
+
+exclude:
+  - draft/
