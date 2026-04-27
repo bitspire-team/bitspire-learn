@@ -10,6 +10,7 @@ Each feature is a file or subfolder directly under `docs/`. Only use a subfolder
 - Deployment (Docker, Dokploy): `docs/deployment.md`
 - Analytics dashboard: `docs/analytics.md`
 - Self-improvement learning loop: `docs/self-improvement.md`
+- Request insight pipeline: `docs/request-insights.md`
 
 ## Self-Improvement and Documentation Workflows
 This repository enforces a strict "learn and document" methodology. Every preference, best practice, architectural decision, and feature detail must be documented so that the agent and team can learn and self-improve. 

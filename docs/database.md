@@ -6,7 +6,7 @@ nav_order: 5
 # Database
 
 ## What It Does
-Stores every proxied request and response in a structured database, enabling queries like "show all completions from the last hour" or "find requests that returned errors." Each response is linked back to its originating request by UUID, so the full round-trip is always traceable.
+Stores every proxied request and response in a structured database, enabling queries like "show all completions from the last hour" or "find requests that returned errors." Each response is linked back to its originating request by UUID, so the full round-trip is always traceable. Derived entities (routes, users, prompts) are extracted from raw logs by the insight pipeline.
 
 ## How It Works
 
@@ -30,15 +30,29 @@ erDiagram
         jsonb headers
         jsonb body
     }
+    Route {
+        int id PK
+        string method
+        string path
+        datetime created_on
+    }
     User {
         int id PK
-        int github_id
-        string login
-        string machine_id
-        datetime first_seen_at
-        datetime last_seen_at
+        int github_id UK
+        string login UK
+        string name
+        string email
+        string avatar_url
+        datetime created_on
     }
-    RequestLog ||--o{ ResponseLog : "has responses"
+    Prompt {
+        int id PK
+        string hash UK "SHA-256"
+        string role
+        text content
+        datetime created_on
+    }
+    RequestLog ||--o{ ResponseLog : "has response"
 ```
 
 ```mermaid
@@ -49,28 +63,28 @@ flowchart LR
         Middleware -->|log_response| ResRepo[ResponseLogRepository]
         ResRepo -->|INSERT| DB
     end
-    subgraph PostProcess["Post-processing (deferred)"]
-        DB -->|read base data| Enrichment[Extract users, devices, prompts]
-        Enrichment -->|write| Derived[(Derived tables)]
+    subgraph Insights["Insight Extraction (real-time)"]
+        DB -->|read request_log| Insight[RequestInsightService]
+        Insight -->|resolve_route| RouteRepo[RouteRepository]
+        Insight -->|resolve_user| UserRepo[UserRepository]
+        Insight -->|resolve_prompt| PromptRepo[PromptRepository]
+        RouteRepo -->|INSERT if new| DB
+        UserRepo -->|INSERT if new| DB
+        PromptRepo -->|INSERT if new| DB
     end
-    Derived -->|query| Dashboard[Analytics / Queries]
+    DB -->|query| Dashboard[Analytics / Queries]
 ```
 
-### Capture vs Post-Processing
-Request and response records are immutable base data. The capture path records raw HTTP traffic only — no user resolution, no device extraction, no prompt parsing. Enrichment happens in a separate post-processing step that reads the base records and derives higher-level entities.
+### Base Data (Immutable)
+Request and response records are immutable base data. The capture path records raw HTTP traffic only.
 
-### Capture Data Flow
-1. Middleware intercepts a request and generates a UUID
-2. Request details (method, URL, headers, parsed body) are written to `request_logs`
-3. The UUID is passed to the response phase via `request.state`
-4. Response details (status, headers, parsed body) are written to `response_logs` with the same UUID as foreign key
-5. Both JSON and SSE payloads are parsed into structured JSONB for querying
+### Derived Entities (Create-Once)
+The insight pipeline runs after each request and extracts:
+- **Routes** — unique method + path combinations, stored as the raw request path
+- **Users** — resolved from `Bearer gho_` OAuth tokens via the GitHub API
+- **Prompts** — system content extracted from `messages[0]` in request bodies, deduplicated by SHA-256 hash
 
-### Post-Processing (planned)
-A separate process reads base request/response records and extracts:
-- **Users** — resolved from `vscode-machineid` and GitHub authorization headers
-- **Devices** — derived from `user-agent`, `sec-ch-ua-platform`, `x-client-name`, `x-client-version`
-- **Prompts** — extracted from request body payloads
+Each entity is created once when first seen. No counters or timestamps are updated on repeat occurrences — recency and frequency can be computed from request logs via joins.
 
 ## Key Decisions
 
@@ -82,24 +96,28 @@ A separate process reads base request/response records and extracts:
 **What:** Headers and body columns use PostgreSQL `JSONB`.
 **Why:** Enables JSON path queries and indexing directly in the database — no application-level parsing needed to query payload contents.
 
-### Native DateTime Timestamps
-**What:** Timestamp columns use `DateTime`, not strings.
-**Why:** Enables time-range queries, indexing, and sorting without type-casting overhead.
-
 ### SQLite for Local Development
 **What:** Swap `DATABASE_URL` to `sqlite+aiosqlite:///./copilot_proxy.db` for zero-dependency local development.
 **Why:** No need to run PostgreSQL locally just to develop and test.
-
-### Immutable Base Records with Deferred Enrichment
-**What:** Request and response tables capture raw HTTP data only. Users, devices, and prompts are extracted in post-processing.
-**Why:** Keeps the capture path simple and fast. Enrichment logic can evolve independently without risking the integrity of base data.
 
 ### UUID Request-Response Linking
 **What:** Every request gets a UUID propagated to its response via `request.state.req_uuid`.
 **Why:** The full round-trip must always be traceable — response alone is meaningless without the request that caused it.
 
+### Repositories as Pure Data Access
+**What:** Repositories handle only CRUD operations and queries — no business logic, no upserts, no counter increments.
+**Why:** Keeps persistence separate from domain logic. Services own all business decisions and call repositories for storage.
+
+### `created_on` Instead of Temporal Range
+**What:** Entities have a single `created_on` timestamp, not `first_seen_at` / `last_seen_at`.
+**Why:** `last_seen_at` is derived data — a MAX timestamp query against `request_logs` produces the same result. Storing it redundantly adds write overhead on every request.
+
+### Raw Path as Route Identity
+**What:** The route stored in the database is the raw request path. No regex normalization of dynamic segments.
+**Why:** The proxy sees a manageable number of distinct paths. Pattern grouping can be done at query time rather than at ingestion time.
+
 ## Reference
 - Database engine: `src/core/db.py`
-- Models: `src/models/request_log.py`, `src/models/response_log.py`
+- Models: `src/models/request_log.py`, `src/models/response_log.py`, `src/models/route.py`, `src/models/user.py`, `src/models/prompt.py`
 - PostgreSQL URL: `postgresql+asyncpg://<user>:<pass>@<host>:5432/<db>`
 - SQLite URL: `sqlite+aiosqlite:///./copilot_proxy.db`

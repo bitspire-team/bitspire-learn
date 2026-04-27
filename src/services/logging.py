@@ -76,6 +76,7 @@ class LoggingService:
 
     @staticmethod
     async def read_response_body(response: Response):
+        # The body_iterator path is currently dead code — forward_request() always returns a plain Response.
         if not hasattr(response, "body_iterator"):
             body = getattr(response, "body", b"")
         else:
