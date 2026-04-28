@@ -36,6 +36,8 @@ COPILOT_PREFIXES = (
     "/agents",
 )
 
+GITHUB_OVERRIDES = ("/agents/sessions",)
+
 
 async def forward_request(request: Request, upstream_base_url: str) -> Response:
     target_url = str(request.url).replace(str(request.base_url), upstream_base_url)
@@ -75,6 +77,14 @@ async def forward_request(request: Request, upstream_base_url: str) -> Response:
 
 @router.api_route("/{path:path}", methods=PROXY_METHODS)
 async def catch_all(path: str, request: Request) -> Response:
+    if request.url.path.startswith(GITHUB_OVERRIDES):
+        logger.info(
+            "Forwarding %s request for %s to the GitHub API (override).",
+            request.method,
+            request.url.path,
+        )
+        return await forward_request(request, settings.GITHUB_API_BASE_URL)
+
     if request.url.path.startswith(COPILOT_PREFIXES):
         logger.info(
             "Forwarding %s request for %s to the Copilot API.",

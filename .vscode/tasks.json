@@ -18,7 +18,7 @@
         {
             "label": "Run UI",
             "type": "shell",
-            "command": ".\\.venv\\Scripts\\python.exe ui.py",
+            "command": ".\\.venv\\Scripts\\python.exe -m streamlit run ui.py --server.headless false",
             "problemMatcher": [],
             "group": "build"
         },

@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Depends, Request, Response
 
@@ -108,7 +108,7 @@ class LoggingService:
 
         request_log = await self.request_repo.create(
             id=req_uuid,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             method=request.method,
             url=str(request.url),
             path=request.url.path,
@@ -131,7 +131,7 @@ class LoggingService:
         response_log = await self.response_repo.create(
             id=str(uuid.uuid4()),
             request_id=req_uuid,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(UTC),
             status_code=response.status_code,
             headers=dict(response.headers),
             body=response_body,

@@ -16,7 +16,7 @@ async def is_alive() -> dict:
     return {"status": "alive"}
 
 
-@router.get("/health")
+@router.get("/healthy")
 async def is_healthy(repo: HealthRepository = Depends(HealthRepository)) -> Response:
     logger.info("Received a health check request.")
     try:
