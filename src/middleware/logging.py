@@ -5,7 +5,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.db import AsyncSessionLocal
 from src.repositories import RequestLogRepository, ResponseLogRepository
+from src.repositories.attachment import AttachmentRepository
 from src.repositories.prompt import PromptRepository
+from src.repositories.repository import RepositoryRepository
 from src.repositories.route import RouteRepository
 from src.repositories.user import UserRepository
 from src.services import LoggingService
@@ -29,6 +31,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 route_repo=RouteRepository(session),
                 user_repo=UserRepository(session),
                 prompt_repo=PromptRepository(session),
+                repo_repo=RepositoryRepository(session),
+                attachment_repo=AttachmentRepository(session),
             )
             await insight_service.extract_and_store(request_log, response_log)
 
