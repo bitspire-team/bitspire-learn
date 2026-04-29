@@ -9,4 +9,4 @@ class Route(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     method = Column(String, index=True)
     path = Column(String, index=True)
-    created_on = Column(DateTime)
+    created_on = Column(DateTime(timezone=True))

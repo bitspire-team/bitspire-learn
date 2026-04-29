@@ -12,7 +12,7 @@ class Attachment(Base):
     hash = Column(String(64), unique=True, index=True)
     type = Column(String, index=True)
     content = Column(Text)
-    created_on = Column(DateTime)
+    created_on = Column(DateTime(timezone=True))
 
     @staticmethod
     def compute_hash(content: str) -> str:

@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="Requests Dashboard", layout="wide")
+st.set_page_config(page_title="Copilot Proxy Dashboard", layout="wide")
 st.markdown(
     "<style>.block-container { padding-top: 1rem; }</style>",
     unsafe_allow_html=True,
@@ -37,6 +37,39 @@ st.sidebar.button(
     use_container_width=True,
     type="tertiary",
     on_click=lambda: st.session_state.update(page="Requests"),
+)
+
+st.sidebar.divider()
+st.sidebar.write("Entities")
+st.sidebar.button(
+    "Users",
+    use_container_width=True,
+    type="tertiary",
+    on_click=lambda: st.session_state.update(page="Users"),
+)
+st.sidebar.button(
+    "Repositories",
+    use_container_width=True,
+    type="tertiary",
+    on_click=lambda: st.session_state.update(page="Repositories"),
+)
+st.sidebar.button(
+    "Routes",
+    use_container_width=True,
+    type="tertiary",
+    on_click=lambda: st.session_state.update(page="Routes"),
+)
+st.sidebar.button(
+    "Prompts",
+    use_container_width=True,
+    type="tertiary",
+    on_click=lambda: st.session_state.update(page="Prompts"),
+)
+st.sidebar.button(
+    "Attachments",
+    use_container_width=True,
+    type="tertiary",
+    on_click=lambda: st.session_state.update(page="Attachments"),
 )
 page = st.session_state.page
 
@@ -106,6 +139,66 @@ def render_overview_page():
     st.area_chart(chart_df, color=["#2ecc71", "#e74c3c"], stack=True)
 
     logger.info("Successfully rendered the overview page.")
+
+
+@st.cache_data(ttl=30)
+def load_users():
+    logger.info("Loading users from the database.")
+    query = text(
+        "SELECT id, github_id, login, name, email, avatar_url, created_on FROM users ORDER BY created_on DESC"
+    )
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d users from the database.", len(df))
+    return df
+
+
+@st.cache_data(ttl=30)
+def load_repositories():
+    logger.info("Loading repositories from the database.")
+    query = text(
+        "SELECT id, owner, name, nwo, created_on FROM repositories ORDER BY created_on DESC"
+    )
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d repositories from the database.", len(df))
+    return df
+
+
+@st.cache_data(ttl=30)
+def load_routes():
+    logger.info("Loading routes from the database.")
+    query = text(
+        "SELECT id, method, path, created_on FROM routes ORDER BY created_on DESC"
+    )
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d routes from the database.", len(df))
+    return df
+
+
+@st.cache_data(ttl=30)
+def load_prompts():
+    logger.info("Loading prompts from the database.")
+    query = text(
+        "SELECT id, hash, role, content, created_on FROM prompts ORDER BY created_on DESC"
+    )
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d prompts from the database.", len(df))
+    return df
+
+
+@st.cache_data(ttl=30)
+def load_attachments():
+    logger.info("Loading attachments from the database.")
+    query = text(
+        "SELECT id, hash, type, content, created_on FROM attachments ORDER BY created_on DESC"
+    )
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d attachments from the database.", len(df))
+    return df
 
 
 def render_requests_page():
@@ -183,7 +276,123 @@ def render_requests_page():
     logger.info("Successfully rendered the requests page.")
 
 
+def render_users_page():
+    st.title("Users")
+    df = load_users()
+    if df.empty:
+        st.info("No users recorded yet.")
+        return
+    df["created_on"] = (
+        pd.to_datetime(df["created_on"], utc=True)
+        .dt.tz_convert(get_localzone())
+        .dt.tz_localize(None)
+    )
+    st.metric("Total Users", len(df))
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    logger.info("Successfully rendered the users page.")
+
+
+def render_repositories_page():
+    st.title("Repositories")
+    df = load_repositories()
+    if df.empty:
+        st.info("No repositories recorded yet.")
+        return
+    df["created_on"] = (
+        pd.to_datetime(df["created_on"], utc=True)
+        .dt.tz_convert(get_localzone())
+        .dt.tz_localize(None)
+    )
+    st.metric("Total Repositories", len(df))
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    logger.info("Successfully rendered the repositories page.")
+
+
+def render_routes_page():
+    st.title("Routes")
+    df = load_routes()
+    if df.empty:
+        st.info("No routes recorded yet.")
+        return
+    df["created_on"] = (
+        pd.to_datetime(df["created_on"], utc=True)
+        .dt.tz_convert(get_localzone())
+        .dt.tz_localize(None)
+    )
+    st.metric("Total Routes", len(df))
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    logger.info("Successfully rendered the routes page.")
+
+
+def render_prompts_page():
+    st.title("Prompts")
+    df = load_prompts()
+    if df.empty:
+        st.info("No prompts recorded yet.")
+        return
+    df["created_on"] = (
+        pd.to_datetime(df["created_on"], utc=True)
+        .dt.tz_convert(get_localzone())
+        .dt.tz_localize(None)
+    )
+    df["preview"] = df["content"].str[:120] + df["content"].apply(
+        lambda c: "..." if len(str(c)) > 120 else ""
+    )
+    st.metric("Total Prompts", len(df))
+    display = df[["id", "hash", "role", "preview", "created_on"]].copy()
+    display.columns = ["ID", "Hash", "Role", "Content Preview", "Created On"]
+    st.dataframe(display, use_container_width=True, hide_index=True)
+
+    st.write("#### Prompt Detail")
+    prompt_id = st.selectbox("Select a prompt to view full content", df["id"].tolist())
+    if prompt_id:
+        row = df[df["id"] == prompt_id].iloc[0]
+        st.write(f"**Role:** {row['role']}")
+        st.code(row["content"], language="markdown")
+    logger.info("Successfully rendered the prompts page.")
+
+
+def render_attachments_page():
+    st.title("Attachments")
+    df = load_attachments()
+    if df.empty:
+        st.info("No attachments recorded yet.")
+        return
+    df["created_on"] = (
+        pd.to_datetime(df["created_on"], utc=True)
+        .dt.tz_convert(get_localzone())
+        .dt.tz_localize(None)
+    )
+    df["preview"] = df["content"].str[:120] + df["content"].apply(
+        lambda c: "..." if len(str(c)) > 120 else ""
+    )
+    st.metric("Total Attachments", len(df))
+    display = df[["id", "hash", "type", "preview", "created_on"]].copy()
+    display.columns = ["ID", "Hash", "Type", "Content Preview", "Created On"]
+    st.dataframe(display, use_container_width=True, hide_index=True)
+
+    st.write("#### Attachment Detail")
+    attachment_id = st.selectbox(
+        "Select an attachment to view full content", df["id"].tolist()
+    )
+    if attachment_id:
+        row = df[df["id"] == attachment_id].iloc[0]
+        st.write(f"**Type:** {row['type']}")
+        st.code(row["content"], language="markdown")
+    logger.info("Successfully rendered the attachments page.")
+
+
 if page == "Overview":
     render_overview_page()
 elif page == "Requests":
     render_requests_page()
+elif page == "Users":
+    render_users_page()
+elif page == "Repositories":
+    render_repositories_page()
+elif page == "Routes":
+    render_routes_page()
+elif page == "Prompts":
+    render_prompts_page()
+elif page == "Attachments":
+    render_attachments_page()

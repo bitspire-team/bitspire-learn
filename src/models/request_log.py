@@ -7,7 +7,7 @@ class RequestLog(Base):
     __tablename__ = "request_logs"
 
     id = Column(String, primary_key=True, index=True)
-    timestamp = Column(DateTime)
+    timestamp = Column(DateTime(timezone=True))
     method = Column(String)
     url = Column(String)
     path = Column(String)

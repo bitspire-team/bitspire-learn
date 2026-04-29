@@ -12,4 +12,4 @@ class User(Base):
     name = Column(String, nullable=True)
     email = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
-    created_on = Column(DateTime)
+    created_on = Column(DateTime(timezone=True))

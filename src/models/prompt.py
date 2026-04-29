@@ -12,7 +12,7 @@ class Prompt(Base):
     hash = Column(String(64), unique=True, index=True)
     role = Column(String)
     content = Column(Text)
-    created_on = Column(DateTime)
+    created_on = Column(DateTime(timezone=True))
 
     @staticmethod
     def compute_hash(content: str) -> str:

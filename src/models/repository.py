@@ -10,4 +10,4 @@ class Repository(Base):
     owner = Column(String, index=True)
     name = Column(String, index=True)
     nwo = Column(String, unique=True, index=True)
-    created_on = Column(DateTime)
+    created_on = Column(DateTime(timezone=True))
