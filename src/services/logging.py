@@ -95,6 +95,8 @@ class LoggingService:
         content_type = response.headers.get("content-type", "")
         if "text/event-stream" in content_type or b"data: " in body:
             return LoggingService.parse_as_sse(body)
+        if "text/plain" in content_type.lower():
+            return body.decode("utf-8", errors="replace")
         if "json" in content_type.lower():
             return LoggingService.parse_as_json(body)
         return body.decode("utf-8", errors="replace")
