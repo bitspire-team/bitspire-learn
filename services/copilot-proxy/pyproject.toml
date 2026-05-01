@@ -26,3 +26,6 @@ include = ["src*"]
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-asyncio"]
+
+[tool.uv.sources]
+copilot-proxy = { workspace = true }
