@@ -12,6 +12,12 @@ Each feature is a file or subfolder directly under `docs/`. Only use a subfolder
 - Self-improvement learning loop: `docs/self-improvement.md`
 - Request insight pipeline: `docs/request-insights.md`
 
+## Monorepo Navigation
+This repository uses a strict monorepo structure utilizing `uv workspaces` and VS Code Multi-root Workspaces.
+1. ALWAYS identify the active package boundary before making code suggestions. 
+2. The codebase is broken down into `packages/` (shared libraries) and `services/` (deployed apps). 
+3. Do not modify files outside of the target package unless explicitly instructed to do so. Context should be scoped strictly to the package you are working on.
+
 ## Self-Improvement and Documentation Workflows
 This repository enforces a strict "learn and document" methodology. Every preference, best practice, architectural decision, and feature detail must be documented so that the agent and team can learn and self-improve. 
 

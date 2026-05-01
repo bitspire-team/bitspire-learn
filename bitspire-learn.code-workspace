@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "services/copilot-proxy"
+		},
+		{
+			"path": "services/copilot-ui"
+		}
+	],
+	"settings": {
+		"python.defaultInterpreterPath": "${workspaceFolder}/../../.venv/Scripts/python.exe"
+	}
+}
