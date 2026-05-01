@@ -8,9 +8,7 @@ from src.core.config import settings
 import re
 from tzlocal import get_localzone
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Copilot Proxy Dashboard", layout="wide")
@@ -19,8 +17,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-sync_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
-engine = create_engine(sync_url)
+engine = create_engine(settings.DATABASE_URL)
 
 if "page" not in st.session_state:
     st.session_state.page = "Overview"
@@ -97,11 +94,7 @@ def render_overview_page():
         st.info("No requests recorded yet.")
         return
 
-    df["timestamp"] = (
-        pd.to_datetime(df["timestamp"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
     df["success"] = df["status_code"].apply(lambda s: s < 400 if pd.notna(s) else False)
 
     cutoff = datetime.now() - timedelta(hours=24)
@@ -144,9 +137,7 @@ def render_overview_page():
 @st.cache_data(ttl=30)
 def load_users():
     logger.info("Loading users from the database.")
-    query = text(
-        "SELECT id, github_id, login, name, email, avatar_url, created_on FROM users ORDER BY created_on DESC"
-    )
+    query = text("SELECT id, github_id, login, name, email, avatar_url, created_on FROM users ORDER BY created_on DESC")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d users from the database.", len(df))
@@ -156,9 +147,7 @@ def load_users():
 @st.cache_data(ttl=30)
 def load_repositories():
     logger.info("Loading repositories from the database.")
-    query = text(
-        "SELECT id, owner, name, nwo, created_on FROM repositories ORDER BY created_on DESC"
-    )
+    query = text("SELECT id, owner, name, nwo, created_on FROM repositories ORDER BY created_on DESC")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d repositories from the database.", len(df))
@@ -168,9 +157,7 @@ def load_repositories():
 @st.cache_data(ttl=30)
 def load_routes():
     logger.info("Loading routes from the database.")
-    query = text(
-        "SELECT id, method, path, created_on FROM routes ORDER BY created_on DESC"
-    )
+    query = text("SELECT id, method, path, created_on FROM routes ORDER BY created_on DESC")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d routes from the database.", len(df))
@@ -180,9 +167,7 @@ def load_routes():
 @st.cache_data(ttl=30)
 def load_prompts():
     logger.info("Loading prompts from the database.")
-    query = text(
-        "SELECT id, hash, role, content, created_on FROM prompts ORDER BY created_on DESC"
-    )
+    query = text("SELECT id, hash, role, content, created_on FROM prompts ORDER BY created_on DESC")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d prompts from the database.", len(df))
@@ -192,9 +177,7 @@ def load_prompts():
 @st.cache_data(ttl=30)
 def load_attachments():
     logger.info("Loading attachments from the database.")
-    query = text(
-        "SELECT id, hash, type, content, created_on FROM attachments ORDER BY created_on DESC"
-    )
+    query = text("SELECT id, hash, type, content, created_on FROM attachments ORDER BY created_on DESC")
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d attachments from the database.", len(df))
@@ -204,14 +187,8 @@ def load_attachments():
 def render_requests_page():
     st.title("Requests")
     df = load_requests()
-    df["timestamp"] = (
-        pd.to_datetime(df["timestamp"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
-    df["status"] = df["status_code"].apply(
-        lambda s: "🟢" if pd.notna(s) and s < 400 else "🔴"
-    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
+    df["status"] = df["status_code"].apply(lambda s: "🟢" if pd.notna(s) and s < 400 else "🔴")
 
     with st.container(border=True):
         col1, col2 = st.columns([3, 1])
@@ -233,9 +210,7 @@ def render_requests_page():
     if len(date_range) == 2:
         start = pd.Timestamp(date_range[0])
         end = pd.Timestamp(date_range[1]) + pd.Timedelta(days=1)
-        filtered = filtered[
-            (filtered["timestamp"] >= start) & (filtered["timestamp"] < end)
-        ]
+        filtered = filtered[(filtered["timestamp"] >= start) & (filtered["timestamp"] < end)]
     if failed_only:
         filtered = filtered[filtered["status"] == "🔴"]
 
@@ -247,17 +222,12 @@ def render_requests_page():
     if not failed.empty:
         st.write("#### Error Details")
         failed["error_key"] = failed["response_body"].apply(
-            lambda b: (
-                re.sub(r"[\w-]+/[\w.-]+", "<repo>", str(b)) if b else "No response body"
-            )
+            lambda b: re.sub(r"[\w-]+/[\w.-]+", "<repo>", str(b)) if b else "No response body"
         )
         for error_key, group in failed.groupby("error_key", sort=False):
             sample = group.iloc[0]
             count = len(group)
-            label = (
-                f"🔴 {sample['method']} {sample['path']} — "
-                f"{int(sample['status_code'])} ({count}x)"
-            )
+            label = f"🔴 {sample['method']} {sample['path']} — {int(sample['status_code'])} ({count}x)"
             with st.expander(label):
                 body = sample.get("response_body")
                 if body:
@@ -269,9 +239,7 @@ def render_requests_page():
 
     success_count = filtered[filtered["status"] == "🟢"].shape[0]
     rate = (success_count / len(filtered) * 100) if len(filtered) > 0 else 0
-    st.write(
-        f"**{len(filtered)}** of **{len(df)}** requests — **{rate:.1f}%** success rate"
-    )
+    st.write(f"**{len(filtered)}** of **{len(df)}** requests — **{rate:.1f}%** success rate")
 
     logger.info("Successfully rendered the requests page.")
 
@@ -282,11 +250,7 @@ def render_users_page():
     if df.empty:
         st.info("No users recorded yet.")
         return
-    df["created_on"] = (
-        pd.to_datetime(df["created_on"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
+    df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
     st.metric("Total Users", len(df))
     st.dataframe(df, use_container_width=True, hide_index=True)
     logger.info("Successfully rendered the users page.")
@@ -298,11 +262,7 @@ def render_repositories_page():
     if df.empty:
         st.info("No repositories recorded yet.")
         return
-    df["created_on"] = (
-        pd.to_datetime(df["created_on"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
+    df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
     st.metric("Total Repositories", len(df))
     st.dataframe(df, use_container_width=True, hide_index=True)
     logger.info("Successfully rendered the repositories page.")
@@ -314,11 +274,7 @@ def render_routes_page():
     if df.empty:
         st.info("No routes recorded yet.")
         return
-    df["created_on"] = (
-        pd.to_datetime(df["created_on"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
+    df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
     st.metric("Total Routes", len(df))
     st.dataframe(df, use_container_width=True, hide_index=True)
     logger.info("Successfully rendered the routes page.")
@@ -330,14 +286,8 @@ def render_prompts_page():
     if df.empty:
         st.info("No prompts recorded yet.")
         return
-    df["created_on"] = (
-        pd.to_datetime(df["created_on"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
-    df["preview"] = df["content"].str[:120] + df["content"].apply(
-        lambda c: "..." if len(str(c)) > 120 else ""
-    )
+    df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
+    df["preview"] = df["content"].str[:120] + df["content"].apply(lambda c: "..." if len(str(c)) > 120 else "")
     st.metric("Total Prompts", len(df))
     display = df[["id", "hash", "role", "preview", "created_on"]].copy()
     display.columns = ["ID", "Hash", "Role", "Content Preview", "Created On"]
@@ -358,23 +308,15 @@ def render_attachments_page():
     if df.empty:
         st.info("No attachments recorded yet.")
         return
-    df["created_on"] = (
-        pd.to_datetime(df["created_on"], utc=True)
-        .dt.tz_convert(get_localzone())
-        .dt.tz_localize(None)
-    )
-    df["preview"] = df["content"].str[:120] + df["content"].apply(
-        lambda c: "..." if len(str(c)) > 120 else ""
-    )
+    df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
+    df["preview"] = df["content"].str[:120] + df["content"].apply(lambda c: "..." if len(str(c)) > 120 else "")
     st.metric("Total Attachments", len(df))
     display = df[["id", "hash", "type", "preview", "created_on"]].copy()
     display.columns = ["ID", "Hash", "Type", "Content Preview", "Created On"]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
     st.write("#### Attachment Detail")
-    attachment_id = st.selectbox(
-        "Select an attachment to view full content", df["id"].tolist()
-    )
+    attachment_id = st.selectbox("Select an attachment to view full content", df["id"].tolist())
     if attachment_id:
         row = df[df["id"] == attachment_id].iloc[0]
         st.write(f"**Type:** {row['type']}")
