@@ -7,6 +7,7 @@ from src.models import RequestLog, ResponseLog
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 class TestRequestLog:
     async def test_insert_with_timezone_aware_timestamp(self, async_session):
         log = RequestLog(
@@ -29,6 +30,7 @@ class TestRequestLog:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 class TestResponseLog:
     async def test_insert_with_timezone_aware_timestamp(self, async_session):
         req = RequestLog(

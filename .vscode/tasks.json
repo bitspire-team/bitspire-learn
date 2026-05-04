@@ -31,7 +31,7 @@
         {
             "label": "Test Proxy",
             "type": "shell",
-            "command": "uv run pytest tests/test_proxy.py",
+            "command": "uv run pytest",
             "options": {
                 "cwd": "${workspaceFolder}/services/copilot-proxy"
             },
