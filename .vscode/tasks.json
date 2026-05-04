@@ -1,52 +1,76 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Setup Virtual Environment",
-            "type": "shell",
-            "command": "uv sync",
-            "problemMatcher": [],
-            "group": "build"
-        },
-        {
-            "label": "Run Proxy",
-            "type": "shell",
-            "command": "uv run uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload",
-            "options": {
-                "cwd": "${workspaceFolder}/services/copilot-proxy"
-            },
-            "problemMatcher": [],
-            "group": "build"
-        },
-        {
-            "label": "Run UI",
-            "type": "shell",
-            "command": "uv run streamlit run src/ui.py --server.headless false",
-            "options": {
-                "cwd": "${workspaceFolder}/services/copilot-ui"
-            },
-            "problemMatcher": [],
-            "group": "build"
-        },
-        {
-            "label": "Test Proxy",
-            "type": "shell",
-            "command": "uv run pytest",
-            "options": {
-                "cwd": "${workspaceFolder}/services/copilot-proxy"
-            },
-            "problemMatcher": [],
-            "group": "test"
-        },
-        {
-            "label": "Build Docker Image",
-            "type": "shell",
-            "command": "docker build -t copilot-proxy .",
-            "options": {
-                "cwd": "${workspaceFolder}/services/copilot-proxy"
-            },
-            "problemMatcher": [],
-            "group": "build"
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Setup Workspace",
+			"dependsOn": [
+				"Setup Virtual Environment",
+				"Install Pre-commit Hooks",
+				"Run Pre-commit (All Files)",
+				"Test Proxy",
+				"Build Docker Image"
+			],
+			"dependsOrder": "sequence",
+			"group": "build"
+		},
+		{
+			"label": "Run Proxy",
+			"type": "shell",
+			"command": "uv run uvicorn src.main:app --host 0.0.0.0 --port 8080 --reload",
+			"options": {
+				"cwd": "${workspaceFolder}/services/copilot-proxy"
+			},
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run UI",
+			"type": "shell",
+			"command": "uv run streamlit run src/ui.py --server.headless false",
+			"options": {
+				"cwd": "${workspaceFolder}/services/copilot-ui"
+			},
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Test Proxy",
+			"type": "shell",
+			"command": "uv run pytest",
+			"options": {
+				"cwd": "${workspaceFolder}/services/copilot-proxy"
+			},
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Run Pre-commit (All Files)",
+			"type": "shell",
+			"command": "uv run pre-commit run --all-files",
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Build Docker Image",
+			"type": "shell",
+			"command": "docker build -t copilot-proxy .",
+			"options": {
+				"cwd": "${workspaceFolder}/services/copilot-proxy"
+			},
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Setup Virtual Environment",
+			"type": "shell",
+			"command": "uv sync --all-packages",
+			"problemMatcher": []
+		},
+		{
+			"label": "Install Pre-commit Hooks",
+			"type": "shell",
+			"command": "uv run pre-commit install",
+			"problemMatcher": []
+		}
+	]
 }

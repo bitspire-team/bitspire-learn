@@ -1,11 +1,10 @@
-import streamlit as st
-import pandas as pd
-import json
 import logging
 from datetime import datetime, timedelta
-import re
-from tzlocal import get_localzone
+
+import pandas as pd
+import streamlit as st
 from src.data import load_requests
+from tzlocal import get_localzone
 
 logger = logging.getLogger(__name__)
 st.title("Overview")

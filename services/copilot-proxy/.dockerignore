@@ -1,6 +1,9 @@
 ﻿# Ignore everything in the directory by default
 *
 
-# Explicitly include only the source code and dependencies file
+# Explicitly include only the source code, tests, migrations, and dependencies file
 !src/*
+!tests/*
+!alembic/*
+!alembic.ini
 !pyproject.toml

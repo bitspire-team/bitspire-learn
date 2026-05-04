@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: pytest-proxy
+        name: Run Proxy Tests
+        entry: uv run --directory services/copilot-proxy pytest
+        # Resolves to the project's local .venv because of `uv run`
+        language: system
+        pass_filenames: false
+        # Prevents pre-commit from spinning up multiple parallel test suites, which causes race conditions
+        require_serial: true
+        always_run: true
+
+      - id: ruff-check
+        name: Ruff Check
+        entry: uv run ruff check --force-exclude
+        # Resolves to the project's local .venv because of `uv run`
+        language: system
+        types: [ python ]
+
+      - id: ty-check
+        name: Ty Type Check
+        entry: uv run ty check
+        # Resolves to the project's local .venv because of `uv run`
+        language: system
+        types: [ python ]
+
+      - id: ruff-format
+        name: Ruff Format (Manual)
+        entry: uv run ruff format --force-exclude
+        # Resolves to the project's local .venv because of `uv run`
+        language: system
+        types: [ python ]
+        # Manual stage means this hook only runs when explicitly requested.
+        stages: [manual]

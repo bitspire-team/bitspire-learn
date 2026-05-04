@@ -9,40 +9,28 @@ from tzlocal import get_localzone
 logger = logging.getLogger(__name__)
 
 
-def _extract_generated_messages(response_body):
-    if isinstance(response_body, str):
+def _render_message(text: str, meta_data: dict | str | None):
+    if text and text.strip():
+        st.markdown(text.strip())
+
+    if not meta_data:
+        return
+
+    # Handle both stringified and loaded JSON formats
+    if isinstance(meta_data, str):
         try:
-            response_body = json.loads(response_body)
+            meta_data = json.loads(meta_data)
         except Exception:
-            return []
-    if not isinstance(response_body, dict):
-        return []
+            return
 
-    generated_messages = []
-
-    for choice in response_body.get("choices") or []:
-        msg = choice.get("message") or {}
-        if msg.get("content"):
-            generated_messages.append(
-                {"role": msg.get("role") or "assistant", "content": str(msg["content"])}
-            )
-
-    chunks, roles = {}, {}
-    for event in response_body.get("sse_events") or []:
-        for choice in event.get("choices") or []:
-            idx = choice.get("index", 0)
-            delta = choice.get("delta") or {}
-            if delta.get("role"):
-                roles[idx] = delta["role"]
-            if delta.get("content"):
-                chunks.setdefault(idx, []).append(str(delta["content"]))
-
-    for idx, content_chunks in sorted(chunks.items()):
-        content = "".join(content_chunks).strip()
-        if content:
-            generated_messages.append({"role": roles.get(idx, "assistant"), "content": content})
-
-    return generated_messages
+    if isinstance(meta_data, dict):
+        for tag_name, xml_blocks in meta_data.items():
+            with st.expander(f"XML Block: {tag_name}", expanded=False):
+                if isinstance(xml_blocks, list):
+                    for block in xml_blocks:
+                        st.code(block, language="xml")
+                else:
+                    st.code(str(xml_blocks), language="xml")
 
 
 st.title("Messages")
@@ -71,24 +59,21 @@ if selected_option:
     st.write(f"**Interaction ID:** {selected_i_id}")
 
     interaction_df = df[df["interaction_id"] == selected_i_id]
-    rendered_generated_for_requests = set()
 
     for _, row in interaction_df.iterrows():
-        with st.chat_message("user", avatar="🧾"):
-            st.caption("U")
-            st.markdown(row["content"])
+        role = row.get("role", "user")
+        text = str(row.get("text") or "")
+        meta_data = row.get("meta_data")
+        model = row.get("model")
 
-        request_log_id = row.get("request_log_id")
-        if request_log_id not in rendered_generated_for_requests:
-            generated_messages = _extract_generated_messages(row.get("response_body"))
-            for generated in generated_messages:
-                with st.chat_message("assistant", avatar="🤖"):
-                    st.caption("Generated response")
-                    st.markdown(generated["content"])
+        avatar = "🤖" if role == "assistant" else "🧾"
 
-            if not generated_messages:
-                with st.chat_message("assistant", avatar="🤖"):
-                    st.info("No generated response was captured for this request.")
-            rendered_generated_for_requests.add(request_log_id)
+        with st.chat_message(role, avatar=avatar):
+            caption = str(role).capitalize()
+            if model:
+                caption += f" ({model})"
+
+            st.caption(caption)
+            _render_message(text, meta_data)
 
 logger.info("Successfully rendered the messages page.")

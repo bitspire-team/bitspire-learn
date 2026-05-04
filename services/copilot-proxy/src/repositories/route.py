@@ -16,7 +16,5 @@ class RouteRepository(BaseRepository[Route]):
         super().__init__(Route, session)
 
     async def get_by_method_and_path(self, method: str, path: str) -> Route | None:
-        result = await self.session.execute(
-            select(Route).where(Route.method == method, Route.path == path)
-        )
+        result = await self.session.execute(select(Route).where(Route.method == method, Route.path == path))
         return result.scalars().first()

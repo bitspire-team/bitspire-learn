@@ -16,7 +16,5 @@ class RepositoryRepository(BaseRepository[Repository]):
         super().__init__(Repository, session)
 
     async def get_by_nwo(self, nwo: str) -> Repository | None:
-        result = await self.session.execute(
-            select(Repository).where(Repository.nwo == nwo)
-        )
+        result = await self.session.execute(select(Repository).where(Repository.nwo == nwo))
         return result.scalars().first()

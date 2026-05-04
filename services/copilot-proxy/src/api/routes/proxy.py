@@ -37,13 +37,10 @@ COPILOT_PREFIXES = (
 )
 
 
-
 async def forward_request(request: Request, upstream_base_url: str) -> Response:
     target_url = str(request.url).replace(str(request.base_url), upstream_base_url)
 
-    outbound_headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in RESTRICTED_HEADERS
-    }
+    outbound_headers = {k: v for k, v in request.headers.items() if k.lower() not in RESTRICTED_HEADERS}
 
     body = await request.body()
 
@@ -61,11 +58,7 @@ async def forward_request(request: Request, upstream_base_url: str) -> Response:
         logger.exception("Failed to forward request to %s.", target_url)
         return Response(status_code=502, content=f"Proxy error: {e}")
 
-    response_headers = {
-        k: v
-        for k, v in upstream_response.headers.items()
-        if k.lower() not in RESTRICTED_HEADERS
-    }
+    response_headers = {k: v for k, v in upstream_response.headers.items() if k.lower() not in RESTRICTED_HEADERS}
     return Response(
         status_code=upstream_response.status_code,
         content=upstream_response.content,
@@ -82,11 +75,11 @@ async def catch_all(path: str, request: Request) -> Response:
             request.method,
             request.url.path,
         )
-        return await forward_request(request, settings.COPILOT_API_BASE_URL)
+        return await forward_request(request, settings.COPILOT_API_BASE_URL)  # type: ignore
 
     logger.info(
         "Forwarding %s request for %s to the GitHub API.",
         request.method,
         request.url.path,
     )
-    return await forward_request(request, settings.GITHUB_API_BASE_URL)
+    return await forward_request(request, settings.GITHUB_API_BASE_URL)  # type: ignore

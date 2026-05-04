@@ -16,7 +16,5 @@ class AttachmentRepository(BaseRepository[Attachment]):
         super().__init__(Attachment, session)
 
     async def get_by_hash(self, hash: str) -> Attachment | None:
-        result = await self.session.execute(
-            select(Attachment).where(Attachment.hash == hash)
-        )
+        result = await self.session.execute(select(Attachment).where(Attachment.hash == hash))
         return result.scalars().first()

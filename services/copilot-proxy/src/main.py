@@ -14,9 +14,7 @@ from src.middleware import LoggingMiddleware
 
 os.makedirs("outputs/logs", exist_ok=True)
 
-log_file_path = os.path.join(
-    "outputs/logs", f"proxy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-)
+log_file_path = os.path.join("outputs/logs", f"proxy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",

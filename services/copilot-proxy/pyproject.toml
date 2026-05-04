@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv",
     "pydantic-settings",
     "tzlocal",
+    "alembic",
 ]
 
 [tool.setuptools.packages.find]
@@ -28,9 +29,7 @@ include = ["src*"]
 test = ["pytest", "pytest-asyncio"]
 
 [tool.pytest.ini_options]
-markers = [
-    "integration: marks tests as integration tests",
-]
+markers = ["integration: marks tests as integration tests"]
 
 [tool.uv.sources]
 copilot-proxy = { workspace = true }

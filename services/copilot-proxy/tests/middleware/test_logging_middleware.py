@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from fastapi import FastAPI, Request
-from starlette.responses import Response
-from unittest.mock import MagicMock, AsyncMock, patch
 from src.middleware.logging import LoggingMiddleware
+from starlette.responses import Response
+
 
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -22,8 +24,10 @@ class TestLoggingMiddleware:
             "headers": [],
         }
         request = Request(scope=scope)
+
         async def mock_receive():
-            return {"type": "http.request", "body": b'', "more_body": False}
+            return {"type": "http.request", "body": b"", "more_body": False}
+
         request._receive = mock_receive
 
         # Use the real AsyncSessionLocal from conftest via patching to return our test session
@@ -52,12 +56,13 @@ class TestLoggingMiddleware:
             "headers": [(b"content-type", b"application/json")],
         }
         request = Request(scope=scope)
+
         async def mock_receive():
             return {"type": "http.request", "body": b'{"invalid": json', "more_body": False}
+
         request._receive = mock_receive
 
         with patch("src.middleware.logging.AsyncSessionLocal", return_value=async_session):
             middleware = LoggingMiddleware(app)
             response = await middleware.dispatch(request, mock_call_next)
             assert response.status_code == 200
-

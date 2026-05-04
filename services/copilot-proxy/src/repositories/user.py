@@ -16,7 +16,5 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User, session)
 
     async def get_by_github_id(self, github_id: int) -> User | None:
-        result = await self.session.execute(
-            select(User).where(User.github_id == github_id)
-        )
+        result = await self.session.execute(select(User).where(User.github_id == github_id))
         return result.scalars().first()

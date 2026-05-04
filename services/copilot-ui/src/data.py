@@ -1,15 +1,13 @@
-import streamlit as st
-import pandas as pd
 import logging
-import json
-from datetime import datetime, timedelta
+
+import pandas as pd
+import streamlit as st
 from sqlalchemy import create_engine, text
 from src.core.config import settings
-import re
-from tzlocal import get_localzone
 
 logger = logging.getLogger(__name__)
 engine = create_engine(settings.DATABASE_URL)
+
 
 @st.cache_data(ttl=30)
 def load_requests():
@@ -26,6 +24,7 @@ def load_requests():
     logger.info(f"Loaded {len(df)} requests from the database.")
     return df
 
+
 @st.cache_data(ttl=30)
 def load_users():
     logger.info("Loading users from the database.")
@@ -34,6 +33,7 @@ def load_users():
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d users from the database.", len(df))
     return df
+
 
 @st.cache_data(ttl=30)
 def load_repositories():
@@ -44,6 +44,7 @@ def load_repositories():
     logger.info("Loaded %d repositories from the database.", len(df))
     return df
 
+
 @st.cache_data(ttl=30)
 def load_routes():
     logger.info("Loading routes from the database.")
@@ -52,6 +53,7 @@ def load_routes():
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d routes from the database.", len(df))
     return df
+
 
 @st.cache_data(ttl=30)
 def load_prompts():
@@ -62,6 +64,7 @@ def load_prompts():
     logger.info("Loaded %d prompts from the database.", len(df))
     return df
 
+
 @st.cache_data(ttl=30)
 def load_attachments():
     logger.info("Loading attachments from the database.")
@@ -71,18 +74,21 @@ def load_attachments():
     logger.info("Loaded %d attachments from the database.", len(df))
     return df
 
+
 @st.cache_data(ttl=30)
 def load_messages():
     logger.info("Loading messages from the database.")
     query = text("""
-        SELECT 
-            m.id, 
-            m.request_log_id, 
-            m.role, 
-            m.content, 
+        SELECT
+            m.id,
+            m.request_log_id,
+            m.role,
+            m.content,
+            m.text,
+            m.meta_data,
+            m.model,
             m.created_on,
             r.headers->>'x-interaction-id' as interaction_id,
-            resp.body as response_body,
             resp.timestamp as response_timestamp
         FROM messages m
         LEFT JOIN request_logs r ON m.request_log_id = r.id
@@ -93,4 +99,3 @@ def load_messages():
         df = pd.read_sql(query, conn)
     logger.info("Loaded %d messages from the database.", len(df))
     return df
-

@@ -9,6 +9,7 @@ from src.repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
+
 class MessageRepository(BaseRepository[Message]):
     def __init__(self, session: AsyncSession = Depends(get_db)):
         super().__init__(Message, session)

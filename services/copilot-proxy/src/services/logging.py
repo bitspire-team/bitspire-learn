@@ -45,16 +45,12 @@ class LoggingService:
                     try:
                         events.append(json.loads(data))
                     except json.JSONDecodeError as e:
-                        logger.warning(
-                            "Failed to parse an SSE event's JSON data: %s", e
-                        )
+                        logger.warning("Failed to parse an SSE event's JSON data: %s", e)
 
         if events:
             return {"sse_events": events}
 
-        logger.warning(
-            "Failed to parse the payload as Server-Sent Events: no valid events found."
-        )
+        logger.warning("Failed to parse the payload as Server-Sent Events: no valid events found.")
         return decoded
 
     @staticmethod
@@ -77,18 +73,19 @@ class LoggingService:
     @staticmethod
     async def read_response_body(response: Response):
         # The body_iterator path is currently dead code — forward_request() always returns a plain Response.
-        if not hasattr(response, "body_iterator"):
+        iterator = getattr(response, "body_iterator", None)
+        if iterator is None:
             body = getattr(response, "body", b"")
         else:
             body = b""
-            async for chunk in response.body_iterator:
+            async for chunk in iterator:  # type: ignore
                 body += chunk
 
             # Reassign so Starlette can still send the consumed body to the client.
             async def body_iterator():
                 yield body
 
-            response.body_iterator = body_iterator()
+            setattr(response, "body_iterator", body_iterator())
 
         if not body:
             return None

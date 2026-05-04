@@ -30,8 +30,6 @@ async def is_healthy(repo: HealthRepository = Depends(HealthRepository)) -> Resp
         logger.error("Database health check failed: %s", e)
         return Response(
             status_code=503,
-            content=json.dumps(
-                {"status": "unhealthy", "error": "Database connection failed"}
-            ),
+            content=json.dumps({"status": "unhealthy", "error": "Database connection failed"}),
             media_type="application/json",
         )

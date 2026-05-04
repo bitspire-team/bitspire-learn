@@ -2,7 +2,6 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-
 from src.models import RequestLog, ResponseLog
 
 

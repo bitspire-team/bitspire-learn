@@ -1,4 +1,6 @@
+import json
 import logging
+import re
 from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
@@ -6,7 +8,6 @@ import httpx
 from fastapi import Depends
 
 from src.models.attachment import Attachment
-from src.models.message import Message
 from src.models.prompt import Prompt
 from src.models.request_log import RequestLog
 from src.models.response_log import ResponseLog
@@ -40,30 +41,59 @@ class RequestInsightService:
         self.message_repo = message_repo
 
     @staticmethod
-    def extract_system_content(body) -> str | None:
-        if not isinstance(body, dict):
-            return None
+    def parse_content_payload(content) -> str:
+        if isinstance(content, list):
+            texts = [p.get("text", "") for p in content if isinstance(p, dict)]
+            return "\n".join(texts)
+        elif isinstance(content, dict) and "text" in content:
+            return str(content["text"])
+        return str(content) if content is not None else ""
+
+    @staticmethod
+    def extract_xml_metadata(text: str) -> tuple[str, dict]:
+        if not text:
+            return "", {}
+
+        parts = re.split(r"(?si)(<([a-z0-9_\-]+)[^>]*>.*?</\2>)", text)
+        plain_text_parts = []
+        meta_data = {}
+
+        i = 0
+        while i < len(parts):
+            text_part = parts[i]
+            tag_match = parts[i + 1] if i + 1 < len(parts) else None
+            tag_name = parts[i + 2] if i + 2 < len(parts) else None
+
+            if text_part and text_part.strip():
+                plain_text_parts.append(text_part.strip())
+
+            if tag_match and tag_name:
+                meta_data.setdefault(tag_name, []).append(tag_match)
+
+            i += 3
+
+        plain_text = "\n\n".join(plain_text_parts)
+        return plain_text, meta_data
+
+    @staticmethod
+    def extract_system_content(body: dict) -> str | None:
         messages = body.get("messages", [])
         if not messages:
             return None
         content = messages[0].get("content", "")
         if isinstance(content, list):
-            content = " ".join(
-                p.get("text", "") for p in content if isinstance(p, dict)
-            )
+            content = " ".join(p.get("text", "") for p in content if isinstance(p, dict))
         return content if content else None
 
     async def resolve_route(self, method: str, path: str) -> None:
         existing = await self.route_repo.get_by_method_and_path(method, path)
         if existing:
             return
-        await self.route_repo.create(
-            method=method, path=path, created_on=datetime.now(UTC)
-        )
+        await self.route_repo.create(method=method, path=path, created_on=datetime.now(UTC))
         logger.info("Discovered new route %s %s.", method, path)
 
     @staticmethod
-    async def fetch_github_profile(auth_header: str) -> dict | None:
+    async def fetch_github_profile(auth_header: str) -> dict:
         response = await github_client.get(
             "https://api.github.com/user",
             headers={
@@ -77,8 +107,10 @@ class RequestInsightService:
                 "GitHub API returned status %d when resolving user profile.",
                 response.status_code,
             )
-            return None
+            raise ValueError("The GitHub profile could not be fetched.")
         profile = response.json()
+        if not isinstance(profile.get("id"), int):
+            raise ValueError("The GitHub profile is missing a valid user ID.")
         logger.info("Fetched GitHub profile for user %s.", profile.get("login"))
         return profile
 
@@ -87,9 +119,7 @@ class RequestInsightService:
         if not auth.startswith("Bearer gho_"):
             return
         profile = await self.fetch_github_profile(auth)
-        if not profile:
-            return
-        github_id = profile.get("id")
+        github_id = profile["id"]
         existing = await self.user_repo.get_by_github_id(github_id)
         if existing:
             return
@@ -101,11 +131,9 @@ class RequestInsightService:
             avatar_url=profile.get("avatar_url"),
             created_on=datetime.now(UTC),
         )
-        logger.info(
-            "Discovered new user %s (GitHub ID %d).", user.login, user.github_id
-        )
+        logger.info("Discovered new user %s (GitHub ID %d).", user.login, user.github_id)
 
-    async def resolve_prompt(self, body) -> None:
+    async def resolve_prompt(self, body: dict) -> None:
         content = self.extract_system_content(body)
         if not content:
             return
@@ -132,21 +160,15 @@ class RequestInsightService:
         parts = nwo.split("/", 1)
         owner = parts[0] if len(parts) == 2 else ""
         name = parts[1] if len(parts) == 2 else nwo
-        await self.repo_repo.create(
-            owner=owner, name=name, nwo=nwo, created_on=datetime.now(UTC)
-        )
+        await self.repo_repo.create(owner=owner, name=name, nwo=nwo, created_on=datetime.now(UTC))
         logger.info("Discovered new repository %s.", nwo)
 
-    async def resolve_attachments(self, body) -> None:
-        if not isinstance(body, dict):
-            return
+    async def resolve_attachments(self, body: dict) -> None:
         for msg in body.get("messages", []):
             content = msg.get("content", "")
             if not isinstance(content, list):
                 continue
             for part in content:
-                if not isinstance(part, dict):
-                    continue
                 part_type = part.get("type", "")
                 part_text = part.get("text", "")
                 if not part_text:
@@ -167,34 +189,96 @@ class RequestInsightService:
                     content_hash[:12],
                 )
 
-    async def resolve_messages(self, body: dict, request_log_id: str) -> None:
-        if not isinstance(body, dict):
-            return
-        messages = body.get("messages", [])
-        for i, msg in enumerate(messages):
+    def extract_generated_messages(self, response_body) -> list[dict]:
+        if isinstance(response_body, str):
+            try:
+                response_body = json.loads(response_body)
+            except Exception:
+                return []
+        if not isinstance(response_body, dict):
+            return []
+
+        generated_messages = []
+
+        for choice in response_body.get("choices") or []:
+            msg = choice.get("message") or {}
+            if msg.get("content"):
+                generated_messages.append({"role": msg.get("role") or "assistant", "content": str(msg["content"])})
+
+        chunks, roles = {}, {}
+        for event in response_body.get("sse_events") or []:
+            for choice in event.get("choices") or []:
+                idx = choice.get("index", 0)
+                delta = choice.get("delta") or {}
+                if delta.get("role"):
+                    roles[idx] = delta["role"]
+                if delta.get("content"):
+                    chunks.setdefault(idx, []).append(str(delta["content"]))
+
+        for idx, content_chunks in sorted(chunks.items()):
+            content = "".join(content_chunks).strip()
+            if content:
+                generated_messages.append({"role": roles.get(idx, "assistant"), "content": content})
+
+        return generated_messages
+
+    async def resolve_messages(self, request_body: dict, request_log_id: str, model_name: str | None = None) -> None:
+        for i, msg in enumerate(request_body.get("messages", [])):
             role = msg.get("role")
             content = msg.get("content")
             if not role or content is None:
                 continue
 
+            raw_text = self.parse_content_payload(content)
+            plain_text, meta_data = self.extract_xml_metadata(raw_text)
+
             await self.message_repo.create(
-                id=f"{request_log_id}_msg_{i}",
+                id=f"{request_log_id}_req_{i}",
                 request_log_id=request_log_id,
                 role=role,
                 content=content,
+                text=plain_text,
+                meta_data=meta_data,
+                model=None,
                 created_on=datetime.now(UTC),
             )
-            logger.info("Stored message with role %s for request %s.", role, request_log_id)
+            logger.info("Stored request message with role %s for request %s.", role, request_log_id)
 
-    async def extract_and_store(
-        self, request_log: RequestLog, response_log: ResponseLog
+    async def resolve_generated_messages(
+        self, response_body: dict, request_log_id: str, model_name: str | None = None
     ) -> None:
-        await self.resolve_route(request_log.method, request_log.path)
-        await self.resolve_user(request_log.headers or {})
-        await self.resolve_prompt(request_log.body)
-        await self.resolve_repository(request_log.url)
-        await self.resolve_attachments(request_log.body)
-        await self.resolve_messages(request_log.body, request_log.id)
+        generated = self.extract_generated_messages(response_body)
+        for i, msg in enumerate(generated):
+            role = msg.get("role", "assistant")
+            raw_text = msg.get("content", "")
+            plain_text, meta_data = self.extract_xml_metadata(raw_text)
+
+            await self.message_repo.create(
+                id=f"{request_log_id}_res_{i}",
+                request_log_id=request_log_id,
+                role=role,
+                content={"text": raw_text},
+                text=plain_text,
+                meta_data=meta_data,
+                model=model_name,
+                created_on=datetime.now(UTC),
+            )
+            logger.info("Stored generated message with role %s for request %s.", role, request_log_id)
+
+    async def extract_and_store(self, request_log: RequestLog, response_log: ResponseLog) -> None:
+        body = request_log.body if isinstance(request_log.body, dict) else {}
+        resp_body = response_log.body if isinstance(response_log.body, dict) else {}
+
+        await self.resolve_route(request_log.method, request_log.path)  # type: ignore
+        await self.resolve_user(request_log.headers or {})  # type: ignore
+        await self.resolve_prompt(body)
+        await self.resolve_repository(request_log.url)  # type: ignore
+        await self.resolve_attachments(body)
+
+        model_name = body.get("model")
+
+        await self.resolve_messages(body, request_log.id, model_name=model_name)  # type: ignore
+        await self.resolve_generated_messages(resp_body, request_log.id, model_name=model_name)  # type: ignore
         logger.info(
             "Processed insights for %s %s (status: %d).",
             request_log.method,

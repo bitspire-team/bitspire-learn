@@ -1,11 +1,10 @@
-import streamlit as st
-import pandas as pd
-import json
 import logging
-from datetime import datetime, timedelta
 import re
-from tzlocal import get_localzone
+
+import pandas as pd
+import streamlit as st
 from src.data import load_requests
+from tzlocal import get_localzone
 
 logger = logging.getLogger(__name__)
 st.title("Requests")
@@ -30,9 +29,9 @@ with st.container(border=True):
         failed_only = st.toggle("Failed only", value=False)
 
 filtered = df.copy()
-if len(date_range) == 2:
-    start = pd.Timestamp(date_range[0])
-    end = pd.Timestamp(date_range[1]) + pd.Timedelta(days=1)
+if isinstance(date_range, tuple) and len(date_range) == 2:
+    start = pd.Timestamp(date_range[0])  # type: ignore
+    end = pd.Timestamp(date_range[1]) + pd.Timedelta(days=1)  # type: ignore
     filtered = filtered[(filtered["timestamp"] >= start) & (filtered["timestamp"] < end)]
 if failed_only:
     filtered = filtered[filtered["status"] == "🔴"]
