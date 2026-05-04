@@ -6,10 +6,12 @@ import httpx
 from fastapi import Depends
 
 from src.models.attachment import Attachment
+from src.models.message import Message
 from src.models.prompt import Prompt
 from src.models.request_log import RequestLog
 from src.models.response_log import ResponseLog
 from src.repositories.attachment import AttachmentRepository
+from src.repositories.message import MessageRepository
 from src.repositories.prompt import PromptRepository
 from src.repositories.repository import RepositoryRepository
 from src.repositories.route import RouteRepository
@@ -28,12 +30,14 @@ class RequestInsightService:
         prompt_repo: PromptRepository = Depends(),
         repo_repo: RepositoryRepository = Depends(),
         attachment_repo: AttachmentRepository = Depends(),
+        message_repo: MessageRepository = Depends(),
     ):
         self.route_repo = route_repo
         self.user_repo = user_repo
         self.prompt_repo = prompt_repo
         self.repo_repo = repo_repo
         self.attachment_repo = attachment_repo
+        self.message_repo = message_repo
 
     @staticmethod
     def extract_system_content(body) -> str | None:
@@ -163,6 +167,25 @@ class RequestInsightService:
                     content_hash[:12],
                 )
 
+    async def resolve_messages(self, body: dict, request_log_id: str) -> None:
+        if not isinstance(body, dict):
+            return
+        messages = body.get("messages", [])
+        for i, msg in enumerate(messages):
+            role = msg.get("role")
+            content = msg.get("content")
+            if not role or content is None:
+                continue
+
+            await self.message_repo.create(
+                id=f"{request_log_id}_msg_{i}",
+                request_log_id=request_log_id,
+                role=role,
+                content=content,
+                created_on=datetime.now(UTC),
+            )
+            logger.info("Stored message with role %s for request %s.", role, request_log_id)
+
     async def extract_and_store(
         self, request_log: RequestLog, response_log: ResponseLog
     ) -> None:
@@ -171,6 +194,7 @@ class RequestInsightService:
         await self.resolve_prompt(request_log.body)
         await self.resolve_repository(request_log.url)
         await self.resolve_attachments(request_log.body)
+        await self.resolve_messages(request_log.body, request_log.id)
         logger.info(
             "Processed insights for %s %s (status: %d).",
             request_log.method,
