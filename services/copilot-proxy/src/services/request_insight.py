@@ -225,7 +225,7 @@ class RequestInsightService:
         return generated_messages
 
     async def resolve_messages(self, request_body: dict, request_log_id: str, model_name: str | None = None) -> None:
-        for i, msg in enumerate(request_body.get("messages", [])):
+        for msg in request_body.get("messages", []):
             role = msg.get("role")
             content = msg.get("content")
             if not role or content is None:
@@ -235,7 +235,6 @@ class RequestInsightService:
             plain_text, meta_data = self.extract_xml_metadata(raw_text)
 
             await self.message_repo.create(
-                id=f"{request_log_id}_req_{i}",
                 request_log_id=request_log_id,
                 role=role,
                 content=content,
@@ -250,13 +249,12 @@ class RequestInsightService:
         self, response_body: dict, request_log_id: str, model_name: str | None = None
     ) -> None:
         generated = self.extract_generated_messages(response_body)
-        for i, msg in enumerate(generated):
+        for msg in generated:
             role = msg.get("role", "assistant")
             raw_text = msg.get("content", "")
             plain_text, meta_data = self.extract_xml_metadata(raw_text)
 
             await self.message_repo.create(
-                id=f"{request_log_id}_res_{i}",
                 request_log_id=request_log_id,
                 role=role,
                 content={"text": raw_text},

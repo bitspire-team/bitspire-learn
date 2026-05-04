@@ -25,7 +25,7 @@ repos:
 
       - id: ty-check
         name: Ty Type Check
-        entry: uv run ty check
+        entry: uv run ty check --force-exclude
         # Resolves to the project's local .venv because of `uv run`
         language: system
         types: [ python ]
@@ -37,4 +37,4 @@ repos:
         language: system
         types: [ python ]
         # Manual stage means this hook only runs when explicitly requested.
-        stages: [manual]
+        stages: [ manual ]

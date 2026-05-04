@@ -10,6 +10,7 @@ members = ["packages/*", "services/*"]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+exclude = ["**/alembic/**"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -40,6 +41,9 @@ max-complexity = 15
 
 [tool.ruff.lint.pylint]
 max-nested-blocks = 5
+
+[tool.ty.src]
+exclude = ["**/alembic/**"]
 
 [dependency-groups]
 dev = [
