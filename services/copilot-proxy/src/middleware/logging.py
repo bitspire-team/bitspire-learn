@@ -38,6 +38,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 attachment_repo=AttachmentRepository(session),
                 message_repo=MessageRepository(session),
             )
-            await insight_service.extract_and_store(request_log, response_log)
+            try:
+                await insight_service.extract_and_store(request_log, response_log)
+            except Exception as e:
+                logger.warning(f"Request insight extraction failed (non-fatal): {e}")
 
             return response
