@@ -1,7 +1,7 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 import uvicorn
 from fastapi import APIRouter, FastAPI
@@ -12,9 +12,9 @@ from src.api.routes.proxy import upstream_client
 from src.core.db import init_db
 from src.middleware import LoggingMiddleware
 
-os.makedirs("outputs/logs", exist_ok=True)
+Path("outputs/logs").mkdir(parents=True, exist_ok=True)
 
-log_file_path = os.path.join("outputs/logs", f"proxy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+log_file_path = Path("outputs/logs") / f"proxy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",

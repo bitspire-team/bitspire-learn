@@ -45,7 +45,7 @@ class RequestInsightService:
         if isinstance(content, list):
             texts = [p.get("text", "") for p in content if isinstance(p, dict)]
             return "\n".join(texts)
-        elif isinstance(content, dict) and "text" in content:
+        if isinstance(content, dict) and "text" in content:
             return str(content["text"])
         return str(content) if content is not None else ""
 
@@ -83,7 +83,7 @@ class RequestInsightService:
         content = messages[0].get("content", "")
         if isinstance(content, list):
             content = " ".join(p.get("text", "") for p in content if isinstance(p, dict))
-        return content if content else None
+        return content or None
 
     async def resolve_route(self, method: str, path: str) -> None:
         existing = await self.route_repo.get_by_method_and_path(method, path)
@@ -107,10 +107,12 @@ class RequestInsightService:
                 "GitHub API returned status %d when resolving user profile.",
                 response.status_code,
             )
-            raise ValueError("The GitHub profile could not be fetched.")
+            msg = "The GitHub profile could not be fetched."
+            raise ValueError(msg)
         profile = response.json()
         if not isinstance(profile.get("id"), int):
-            raise ValueError("The GitHub profile is missing a valid user ID.")
+            msg = "The GitHub profile is missing a valid user ID."
+            raise ValueError(msg)
         logger.info("Fetched GitHub profile for user %s.", profile.get("login"))
         return profile
 

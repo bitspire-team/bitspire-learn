@@ -21,7 +21,7 @@ def load_requests():
     """)
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
-    logger.info(f"Loaded {len(df)} requests from the database.")
+    logger.info("Loaded %d requests from the database.", len(df))
     return df
 
 

@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import select
 from src.models.user import User
 from src.repositories.base import BaseRepository
 
@@ -14,7 +15,7 @@ class TestBaseRepository:
         assert user.login == "testuser"
 
         # Verify it's in the database
-        from sqlalchemy import select
+
 
         result = await async_session.execute(select(User).where(User.login == "testuser"))
         db_user = result.scalar_one()
@@ -27,7 +28,7 @@ class TestBaseRepository:
         updated_user = await repo.update(user, name="New Name")
         assert updated_user.name == "New Name"
 
-        from sqlalchemy import select
+
 
         result = await async_session.execute(select(User).where(User.login == "updateuser"))
         db_user = result.scalar_one()

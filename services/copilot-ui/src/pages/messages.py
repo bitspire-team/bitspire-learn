@@ -23,14 +23,17 @@ def _render_message(text: str, meta_data: dict | str | None):
         except Exception:
             return
 
-    if isinstance(meta_data, dict):
-        for tag_name, xml_blocks in meta_data.items():
-            with st.expander(f"XML Block: {tag_name}", expanded=False):
-                if isinstance(xml_blocks, list):
-                    for block in xml_blocks:
-                        st.code(block, language="xml")
-                else:
-                    st.code(str(xml_blocks), language="xml")
+    if not isinstance(meta_data, dict):
+        return
+
+    for tag_name, xml_blocks in meta_data.items():
+        with st.expander(f"XML Block: {tag_name}", expanded=False):
+            if not isinstance(xml_blocks, list):
+                st.code(str(xml_blocks), language="xml")
+                continue
+
+            for block in xml_blocks:
+                st.code(block, language="xml")
 
 
 st.title("Messages")
@@ -63,7 +66,6 @@ if selected_option:
     for _, row in interaction_df.iterrows():
         role = row.get("role", "user")
         text = row.get("text")
-        text = str(text) if text else "[Empty text]"
         meta_data = row.get("meta_data")
         model = row.get("model")
 

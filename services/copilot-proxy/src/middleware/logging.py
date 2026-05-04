@@ -41,6 +41,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             try:
                 await insight_service.extract_and_store(request_log, response_log)
             except Exception as e:
-                logger.warning(f"Request insight extraction failed (non-fatal): {e}")
+                logger.warning("Request insight extraction failed (non-fatal): %s", e)
 
             return response

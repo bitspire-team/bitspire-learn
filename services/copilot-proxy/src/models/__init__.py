@@ -7,4 +7,4 @@ from src.models.response_log import ResponseLog
 from src.models.route import Route
 from src.models.user import User
 
-__all__ = ["Attachment", "Message", "Prompt", "RequestLog", "ResponseLog", "Repository", "Route", "User"]
+__all__ = ["Attachment", "Message", "Prompt", "Repository", "RequestLog", "ResponseLog", "Route", "User"]

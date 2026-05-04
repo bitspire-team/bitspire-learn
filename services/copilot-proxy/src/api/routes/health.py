@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
 
@@ -17,7 +18,7 @@ async def is_alive() -> dict:
 
 
 @router.get("/healthy")
-async def is_healthy(repo: HealthRepository = Depends(HealthRepository)) -> Response:
+async def is_healthy(repo: Annotated[HealthRepository, Depends(HealthRepository)]) -> Response:
     logger.info("Received a health check request.")
     try:
         await repo.check()
@@ -27,7 +28,7 @@ async def is_healthy(repo: HealthRepository = Depends(HealthRepository)) -> Resp
             media_type="application/json",
         )
     except Exception as e:
-        logger.error("Database health check failed: %s", e)
+        logger.exception("Database health check failed: %s", e)
         return Response(
             status_code=503,
             content=json.dumps({"status": "unhealthy", "error": "Database connection failed"}),

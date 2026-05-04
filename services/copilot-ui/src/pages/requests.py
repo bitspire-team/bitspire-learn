@@ -46,7 +46,7 @@ if not failed.empty:
     failed["error_key"] = failed["response_body"].apply(
         lambda b: re.sub(r"[\w-]+/[\w.-]+", "<repo>", str(b)) if b else "No response body"
     )
-    for error_key, group in failed.groupby("error_key", sort=False):
+    for _error_key, group in failed.groupby("error_key", sort=False):
         sample = group.iloc[0]
         count = len(group)
         label = f"🔴 {sample['method']} {sample['path']} — {int(sample['status_code'])} ({count}x)"

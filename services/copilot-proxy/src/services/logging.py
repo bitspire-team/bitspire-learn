@@ -78,14 +78,14 @@ class LoggingService:
             body = getattr(response, "body", b"")
         else:
             body = b""
-            async for chunk in iterator:  # type: ignore
+            async for chunk in iterator:
                 body += chunk
 
             # Reassign so Starlette can still send the consumed body to the client.
             async def body_iterator():
                 yield body
 
-            setattr(response, "body_iterator", body_iterator())
+            response.body_iterator = body_iterator()  # type: ignore
 
         if not body:
             return None

@@ -1,5 +1,5 @@
 import logging
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 ModelType = TypeVar("ModelType", bound=Base)
 
 
-class BaseRepository(Generic[ModelType]):
+class BaseRepository[ModelType: Base]:
     def __init__(self, model: type[ModelType], session: AsyncSession):
         self.model = model
         self.session = session

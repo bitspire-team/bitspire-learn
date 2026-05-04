@@ -39,10 +39,7 @@ class TestLoggingMiddleware:
             assert b"OK" in response.body
 
     async def test_dispatch_does_not_crash_on_insight_failure(self, async_session):
-        """
-        Verify that even if RequestInsightService fails (e.g., due to parsing error),
-        the middleware does not crash the request and still returns the response.
-        """
+        """Verify that the middleware does not crash the request and still returns the response."""
         app = FastAPI()
         app.add_middleware(LoggingMiddleware)
 
