@@ -60,12 +60,7 @@ def upgrade() -> None:
     op.execute("""
         ALTER TABLE messages ADD PRIMARY KEY (id);
     """)
-    # Drop the old index on the removed column (may already be gone)
-    try:
-        op.drop_index("ix_messages_id", table_name="messages")
-    except Exception:
-        pass
-    # Recreate index on new integer column
+    op.execute("DROP INDEX IF EXISTS ix_messages_id")
     op.create_index(op.f("ix_messages_id"), "messages", ["id"], unique=False)
 
 
