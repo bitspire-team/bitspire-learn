@@ -239,7 +239,7 @@ class RequestInsightService:
                 content=content,
                 text=plain_text,
                 meta_data=meta_data,
-                model=None,
+                model=model_name,
                 created_on=datetime.now(UTC),
             )
             logger.info("Stored request message with role %s for request %s.", role, request_log_id)

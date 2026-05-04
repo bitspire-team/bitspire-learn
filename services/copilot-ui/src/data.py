@@ -97,5 +97,6 @@ def load_messages():
     """)
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
+    df = df.where(pd.notna(df), None)
     logger.info("Loaded %d messages from the database.", len(df))
     return df

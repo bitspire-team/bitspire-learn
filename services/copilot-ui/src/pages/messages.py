@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def _render_message(text: str, meta_data: dict | str | None):
     if text and text.strip():
-        st.markdown(text.strip())
+        st.text(text.strip())
 
     if not meta_data:
         return
@@ -62,11 +62,13 @@ if selected_option:
 
     for _, row in interaction_df.iterrows():
         role = row.get("role", "user")
-        text = str(row.get("text") or "")
+        text = row.get("text")
+        text = str(text) if text else "[Empty text]"
         meta_data = row.get("meta_data")
         model = row.get("model")
 
-        avatar = "🤖" if role == "assistant" else "🧾"
+        avatars = {"system": "⚙️", "user": "🧑", "assistant": "🤖"}
+        avatar = avatars.get(role, "🧾")
 
         with st.chat_message(role, avatar=avatar):
             caption = str(role).capitalize()
