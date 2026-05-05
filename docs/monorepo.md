@@ -29,6 +29,14 @@ bitspire-learn/
 **What:** Define packages and services as individual roots in `.code-workspace`.
 **Why:** Creates explicit boundaries for Copilot's `WorkspaceContext` index and Pylance. Copilot isolates its suggestions and answers to the active package root, vastly improving AI accuracy.
 
+### Adding New Packages (SOP)
+**What:** When creating a new package in `services/` or `packages/`, append its path to the `"folders"` array in `bitspire-learn.code-workspace`.
+**Why:** VS Code tools cannot infer sub-project boundaries without explicit configuration. Without this step, Pylance and Copilot treat the new package as part of the root context.
+
+### Each Service Owns Its Configuration
+**What:** Each service has its own `pyproject.toml`, `src/core/config.py`, and `.env`.
+**Why:** Services run as independent processes. Sharing configuration modules across services causes import failures (e.g., `copilot-ui` cannot import from `copilot-proxy`'s `src.core`).
+
 ### Local Directories Over Submodules
 **What:** Store sub-packages as local directories in `packages/` and `services/`.
 **Why:** Enables native indexing and search without the navigation disconnect of git submodules.

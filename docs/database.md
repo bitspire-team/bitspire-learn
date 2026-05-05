@@ -30,6 +30,16 @@ erDiagram
         jsonb headers
         jsonb body
     }
+    Message {
+        int id PK "auto-increment"
+        string request_log_id FK
+        string role
+        jsonb content
+        string text
+        jsonb meta_data
+        string model
+        datetime created_on
+    }
     Route {
         int id PK
         string method
@@ -53,6 +63,7 @@ erDiagram
         datetime created_on
     }
     RequestLog ||--o{ ResponseLog : "has response"
+    RequestLog ||--o{ Message : "has messages"
 ```
 
 ```mermaid
@@ -116,8 +127,18 @@ Each entity is created once when first seen. No counters or timestamps are updat
 **What:** The route stored in the database is the raw request path. No regex normalization of dynamic segments.
 **Why:** The proxy sees a manageable number of distinct paths. Pattern grouping can be done at query time rather than at ingestion time.
 
+### Alembic for Schema Migrations
+**What:** Alembic manages all schema changes via versioned migration scripts.
+**Why:** `Base.metadata.create_all()` cannot alter existing tables. Alembic handles column additions, type changes, and table drops with full version history. Migrations run automatically at container start via `alembic upgrade head`.
+
+### Integer Auto-Increment for Message IDs
+**What:** `Message.id` is an auto-increment Integer, not a composite string.
+**Why:** The `request_log_id` foreign key already establishes the parent-child relationship. Encoding it again in the primary key was redundant.
+
 ## Reference
 - Database engine: `src/core/db.py`
-- Models: `src/models/request_log.py`, `src/models/response_log.py`, `src/models/route.py`, `src/models/user.py`, `src/models/prompt.py`
+- Models: `src/models/request_log.py`, `src/models/response_log.py`, `src/models/route.py`, `src/models/user.py`, `src/models/prompt.py`, `src/models/message.py`
+- Migrations: `services/copilot-proxy/alembic/`
+- Apply migrations: `uv run alembic upgrade head`
 - PostgreSQL URL: `postgresql+asyncpg://<user>:<pass>@<host>:5432/<db>`
 - SQLite URL: `sqlite+aiosqlite:///./copilot_proxy.db`

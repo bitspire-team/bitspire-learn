@@ -16,6 +16,7 @@ flowchart LR
     Insight -->|resolve_route| Routes["Route entity"]
     Insight -->|resolve_user| Users["User entity"]
     Insight -->|resolve_prompt| Prompts["Prompt entity"]
+    Insight -->|resolve_messages| Messages["Message entities"]
 ```
 
 The insight pipeline runs synchronously after each request/response pair is logged. Each resolve method checks if the entity already exists — if not, it creates it. No updates on repeat occurrences.
@@ -28,6 +29,14 @@ Triggers only on `Bearer gho_` OAuth tokens. Calls `GET https://api.github.com/u
 
 ### Prompt Resolution
 Reads `messages[0].content` from the request body. Handles both string content and list-of-parts content. Deduplicates by SHA-256 hash of the content string.
+
+### Message Resolution
+Extracts messages from request bodies and generated responses from SSE streams. Each message is stored with:
+- `text` — plain text content with XML blocks stripped
+- `meta_data` — extracted XML blocks as a JSON dict keyed by tag name
+- `model` — the model name from response metadata
+
+This normalization happens at the proxy level so the UI only needs to render pre-processed data.
 
 ## Key Decisions
 
