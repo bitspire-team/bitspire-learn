@@ -51,6 +51,16 @@
 			"group": "test"
 		},
 		{
+			"label": "Apply Migrations",
+			"type": "shell",
+			"command": "uv run alembic upgrade head",
+			"options": {
+				"cwd": "${workspaceFolder}/services/copilot-proxy"
+			},
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
 			"label": "Build Docker Image",
 			"type": "shell",
 			"command": "docker build -t copilot-proxy .",

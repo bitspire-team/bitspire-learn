@@ -46,39 +46,18 @@ def load_repositories():
 
 
 @st.cache_data(ttl=30)
-def load_routes():
-    logger.info("Loading routes from the database.")
-    query = text("SELECT id, method, path, created_on FROM routes ORDER BY created_on DESC")
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
-    logger.info("Loaded %d routes from the database.", len(df))
-    return df
-
-
-@st.cache_data(ttl=30)
-def load_prompts():
-    logger.info("Loading prompts from the database.")
-    query = text("SELECT id, hash, role, content, created_on FROM prompts ORDER BY created_on DESC")
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
-    logger.info("Loaded %d prompts from the database.", len(df))
-    return df
-
-
-@st.cache_data(ttl=30)
-def load_attachments():
-    logger.info("Loading attachments from the database.")
-    query = text("SELECT id, hash, type, content, created_on FROM attachments ORDER BY created_on DESC")
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
-    logger.info("Loaded %d attachments from the database.", len(df))
-    return df
-
-
-@st.cache_data(ttl=30)
 def load_messages():
     logger.info("Loading messages from the database.")
     query = text("""
+        WITH latest_requests AS (
+            SELECT DISTINCT ON (r.headers->>'x-interaction-id')
+                r.id as request_id,
+                r.headers->>'x-interaction-id' as interaction_id
+            FROM request_logs r
+            WHERE r.timestamp >= NOW() - INTERVAL '24 hours'
+              AND r.headers->>'x-interaction-id' IS NOT NULL
+            ORDER BY r.headers->>'x-interaction-id', r.timestamp DESC
+        )
         SELECT
             m.id,
             m.request_log_id,
@@ -88,10 +67,10 @@ def load_messages():
             m.meta_data,
             m.model,
             m.created_on,
-            r.headers->>'x-interaction-id' as interaction_id,
+            lr.interaction_id,
             resp.timestamp as response_timestamp
         FROM messages m
-        LEFT JOIN request_logs r ON m.request_log_id = r.id
+        INNER JOIN latest_requests lr ON m.request_log_id = lr.request_id
         LEFT JOIN response_logs resp ON resp.request_id = m.request_log_id
         ORDER BY m.created_on ASC
     """)

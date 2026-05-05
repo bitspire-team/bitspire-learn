@@ -7,15 +7,10 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 from fastapi import Depends
 
-from src.models.attachment import Attachment
-from src.models.prompt import Prompt
 from src.models.request_log import RequestLog
 from src.models.response_log import ResponseLog
-from src.repositories.attachment import AttachmentRepository
 from src.repositories.message import MessageRepository
-from src.repositories.prompt import PromptRepository
 from src.repositories.repository import RepositoryRepository
-from src.repositories.route import RouteRepository
 from src.repositories.user import UserRepository
 
 logger = logging.getLogger(__name__)
@@ -26,18 +21,12 @@ github_client = httpx.AsyncClient(timeout=10.0)
 class RequestInsightService:
     def __init__(
         self,
-        route_repo: RouteRepository = Depends(),
         user_repo: UserRepository = Depends(),
-        prompt_repo: PromptRepository = Depends(),
         repo_repo: RepositoryRepository = Depends(),
-        attachment_repo: AttachmentRepository = Depends(),
         message_repo: MessageRepository = Depends(),
     ):
-        self.route_repo = route_repo
         self.user_repo = user_repo
-        self.prompt_repo = prompt_repo
         self.repo_repo = repo_repo
-        self.attachment_repo = attachment_repo
         self.message_repo = message_repo
 
     @staticmethod
@@ -74,23 +63,6 @@ class RequestInsightService:
 
         plain_text = "\n\n".join(plain_text_parts)
         return plain_text, meta_data
-
-    @staticmethod
-    def extract_system_content(body: dict) -> str | None:
-        messages = body.get("messages", [])
-        if not messages:
-            return None
-        content = messages[0].get("content", "")
-        if isinstance(content, list):
-            content = " ".join(p.get("text", "") for p in content if isinstance(p, dict))
-        return content or None
-
-    async def resolve_route(self, method: str, path: str) -> None:
-        existing = await self.route_repo.get_by_method_and_path(method, path)
-        if existing:
-            return
-        await self.route_repo.create(method=method, path=path, created_on=datetime.now(UTC))
-        logger.info("Discovered new route %s %s.", method, path)
 
     @staticmethod
     async def fetch_github_profile(auth_header: str) -> dict:
@@ -135,22 +107,6 @@ class RequestInsightService:
         )
         logger.info("Discovered new user %s (GitHub ID %d).", user.login, user.github_id)
 
-    async def resolve_prompt(self, body: dict) -> None:
-        content = self.extract_system_content(body)
-        if not content:
-            return
-        content_hash = Prompt.compute_hash(content)
-        existing = await self.prompt_repo.get_by_hash(content_hash)
-        if existing:
-            return
-        await self.prompt_repo.create(
-            hash=content_hash,
-            role="system",
-            content=content,
-            created_on=datetime.now(UTC),
-        )
-        logger.info("Discovered new system prompt (hash %s).", content_hash[:12])
-
     async def resolve_repository(self, url: str) -> None:
         parsed = urlparse(url)
         nwo = parse_qs(parsed.query).get("repo_nwo", [None])[0]
@@ -164,32 +120,6 @@ class RequestInsightService:
         name = parts[1] if len(parts) == 2 else nwo
         await self.repo_repo.create(owner=owner, name=name, nwo=nwo, created_on=datetime.now(UTC))
         logger.info("Discovered new repository %s.", nwo)
-
-    async def resolve_attachments(self, body: dict) -> None:
-        for msg in body.get("messages", []):
-            content = msg.get("content", "")
-            if not isinstance(content, list):
-                continue
-            for part in content:
-                part_type = part.get("type", "")
-                part_text = part.get("text", "")
-                if not part_text:
-                    continue
-                content_hash = Attachment.compute_hash(part_text)
-                existing = await self.attachment_repo.get_by_hash(content_hash)
-                if existing:
-                    continue
-                await self.attachment_repo.create(
-                    hash=content_hash,
-                    type=part_type,
-                    content=part_text,
-                    created_on=datetime.now(UTC),
-                )
-                logger.info(
-                    "Discovered new attachment of type %s (hash %s).",
-                    part_type,
-                    content_hash[:12],
-                )
 
     def extract_generated_messages(self, response_body) -> list[dict]:
         if isinstance(response_body, str):
@@ -269,11 +199,8 @@ class RequestInsightService:
         body = request_log.body if isinstance(request_log.body, dict) else {}
         resp_body = response_log.body if isinstance(response_log.body, dict) else {}
 
-        await self.resolve_route(request_log.method, request_log.path)  # type: ignore
         await self.resolve_user(request_log.headers or {})  # type: ignore
-        await self.resolve_prompt(body)
         await self.resolve_repository(request_log.url)  # type: ignore
-        await self.resolve_attachments(body)
 
         model_name = body.get("model")
 

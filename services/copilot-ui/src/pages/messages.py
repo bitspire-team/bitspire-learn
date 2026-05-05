@@ -43,9 +43,12 @@ if df.empty:
     st.stop()
 
 df["created_on"] = pd.to_datetime(df["created_on"], utc=True).dt.tz_convert(get_localzone()).dt.tz_localize(None)
-st.metric("Total Messages", len(df))
 
 recent_interactions = df.groupby("interaction_id")["created_on"].max().sort_values(ascending=False)
+
+col1, col2 = st.columns(2)
+col1.metric("Total Messages", len(df))
+col2.metric("Total Conversations", len(recent_interactions))
 
 interaction_options = []
 for i_id in recent_interactions.index:
@@ -55,7 +58,16 @@ for i_id in recent_interactions.index:
         interaction_options.append(f"{dt_str} | {i_id} ({count} msgs)")
 
 st.write("#### Conversations")
-selected_option = st.selectbox("Select an interaction (chat turn)", interaction_options)
+
+preselect_id = st.query_params.get("id")
+default_index = 0
+if preselect_id:
+    for idx, opt in enumerate(interaction_options):
+        if preselect_id in opt:
+            default_index = idx
+            break
+
+selected_option = st.selectbox("Select an interaction (chat turn)", interaction_options, index=default_index)
 
 if selected_option:
     selected_i_id = selected_option.split(" | ")[1].split(" ")[0]
