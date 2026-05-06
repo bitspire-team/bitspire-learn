@@ -7,10 +7,13 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 from fastapi import Depends
 
+from src.models.repository import Repository
 from src.models.request_log import RequestLog
 from src.models.response_log import ResponseLog
+from src.models.user import User
 from src.repositories.message import MessageRepository
 from src.repositories.repository import RepositoryRepository
+from src.repositories.token_usage import TokenUsageRepository
 from src.repositories.user import UserRepository
 
 logger = logging.getLogger(__name__)
@@ -24,10 +27,12 @@ class RequestInsightService:
         user_repo: UserRepository = Depends(),
         repo_repo: RepositoryRepository = Depends(),
         message_repo: MessageRepository = Depends(),
+        token_usage_repo: TokenUsageRepository = Depends(),
     ):
         self.user_repo = user_repo
         self.repo_repo = repo_repo
         self.message_repo = message_repo
+        self.token_usage_repo = token_usage_repo
 
     @staticmethod
     def parse_content_payload(content) -> str:
@@ -88,15 +93,15 @@ class RequestInsightService:
         logger.info("Fetched GitHub profile for user %s.", profile.get("login"))
         return profile
 
-    async def resolve_user(self, headers: dict) -> None:
+    async def resolve_user(self, headers: dict) -> User | None:
         auth = headers.get("authorization", "")
         if not auth.startswith("Bearer gho_"):
-            return
+            return None
         profile = await self.fetch_github_profile(auth)
         github_id = profile["id"]
         existing = await self.user_repo.get_by_github_id(github_id)
         if existing:
-            return
+            return existing
         user = await self.user_repo.create(
             github_id=github_id,
             login=profile.get("login"),
@@ -106,20 +111,22 @@ class RequestInsightService:
             created_on=datetime.now(UTC),
         )
         logger.info("Discovered new user %s (GitHub ID %d).", user.login, user.github_id)
+        return user
 
-    async def resolve_repository(self, url: str) -> None:
+    async def resolve_repository(self, url: str) -> Repository | None:
         parsed = urlparse(url)
         nwo = parse_qs(parsed.query).get("repo_nwo", [None])[0]
         if not nwo:
-            return
+            return None
         existing = await self.repo_repo.get_by_nwo(nwo)
         if existing:
-            return
+            return existing
         parts = nwo.split("/", 1)
         owner = parts[0] if len(parts) == 2 else ""
         name = parts[1] if len(parts) == 2 else nwo
-        await self.repo_repo.create(owner=owner, name=name, nwo=nwo, created_on=datetime.now(UTC))
+        repo = await self.repo_repo.create(owner=owner, name=name, nwo=nwo, created_on=datetime.now(UTC))
         logger.info("Discovered new repository %s.", nwo)
+        return repo
 
     def extract_generated_messages(self, response_body) -> list[dict]:
         if isinstance(response_body, str):
@@ -195,17 +202,65 @@ class RequestInsightService:
             )
             logger.info("Stored generated message with role %s for request %s.", role, request_log_id)
 
+    def extract_usage_statistics(self, response_body) -> dict:
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+        if isinstance(response_body, str):
+            try:
+                response_body = json.loads(response_body)
+            except Exception:
+                return usage
+        if not isinstance(response_body, dict):
+            return usage
+
+        body_usage = response_body.get("usage")
+        if body_usage:
+            usage["prompt_tokens"] = body_usage.get("prompt_tokens", 0)
+            usage["completion_tokens"] = body_usage.get("completion_tokens", 0)
+            usage["total_tokens"] = body_usage.get("total_tokens", 0)
+            return usage
+
+        events = response_body.get("sse_events") or []
+        for event in reversed(events):
+            event_usage = event.get("usage")
+            if event_usage:
+                usage["prompt_tokens"] = event_usage.get("prompt_tokens", 0)
+                usage["completion_tokens"] = event_usage.get("completion_tokens", 0)
+                usage["total_tokens"] = event_usage.get("total_tokens", 0)
+                return usage
+
+        return usage
+
     async def extract_and_store(self, request_log: RequestLog, response_log: ResponseLog) -> None:
         body = request_log.body if isinstance(request_log.body, dict) else {}
         resp_body = response_log.body if isinstance(response_log.body, dict) else {}
+        headers = request_log.headers if isinstance(request_log.headers, dict) else {}
 
-        await self.resolve_user(request_log.headers or {})  # type: ignore
-        await self.resolve_repository(request_log.url)  # type: ignore
+        user = await self.resolve_user(headers)
+        repo = await self.resolve_repository(str(request_log.url))
 
         model_name = body.get("model")
 
-        await self.resolve_messages(body, request_log.id, model_name=model_name)  # type: ignore
-        await self.resolve_generated_messages(resp_body, request_log.id, model_name=model_name)  # type: ignore
+        await self.resolve_messages(body, str(request_log.id), model_name=model_name)
+        await self.resolve_generated_messages(resp_body, str(request_log.id), model_name=model_name)
+
+        usage = self.extract_usage_statistics(resp_body)
+        interaction_id = headers.get("x-interaction-id")
+
+        if any(usage.values()):
+            await self.token_usage_repo.create(
+                request_log_id=str(request_log.id),
+                user_id=user.id if user else None,
+                repository_id=repo.id if repo else None,
+                interaction_id=interaction_id,
+                model=model_name,
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+                total_tokens=usage["total_tokens"],
+                created_on=datetime.now(UTC),
+            )
+            logger.info("Stored token usage statistics for request %s.", request_log.id)
+
         logger.info(
             "Processed insights for %s %s (status: %d).",
             request_log.method,

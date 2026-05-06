@@ -79,3 +79,28 @@ def load_messages():
     df = df.where(pd.notna(df), None)
     logger.info("Loaded %d messages from the database.", len(df))
     return df
+
+
+@st.cache_data(ttl=30)
+def load_token_usages():
+    logger.info("Loading token usages from the database.")
+    query = text("""
+        SELECT
+            tu.id,
+            tu.interaction_id,
+            tu.model,
+            tu.prompt_tokens,
+            tu.completion_tokens,
+            tu.total_tokens,
+            tu.created_on,
+            u.login as user_login,
+            r.nwo as repository_nwo
+        FROM token_usages tu
+        LEFT JOIN users u ON tu.user_id = u.id
+        LEFT JOIN repositories r ON tu.repository_id = r.id
+        ORDER BY tu.created_on DESC
+    """)
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
+    logger.info("Loaded %d token usages from the database.", len(df))
+    return df

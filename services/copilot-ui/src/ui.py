@@ -12,6 +12,7 @@ st.markdown(
 )
 
 pg_overview = st.Page("pages/overview.py", title="Overview", url_path="overview", default=True)
+pg_analytics = st.Page("pages/analytics.py", title="Analytics", url_path="analytics")
 pg_requests = st.Page("pages/requests.py", title="Requests", url_path="requests")
 pg_users = st.Page("pages/users.py", title="Users", url_path="users")
 pg_repositories = st.Page("pages/repositories.py", title="Repositories", url_path="repositories")
@@ -19,7 +20,7 @@ pg_messages = st.Page("pages/messages.py", title="Messages", url_path="messages"
 
 pg = st.navigation(
     {
-        "Navigation": [pg_overview, pg_requests],
+        "Navigation": [pg_overview, pg_analytics, pg_requests],
         "Entities": [pg_users, pg_repositories, pg_messages],
     }
 )
