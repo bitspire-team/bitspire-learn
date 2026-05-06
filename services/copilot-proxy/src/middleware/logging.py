@@ -7,6 +7,7 @@ from src.core.db import AsyncSessionLocal
 from src.repositories import RequestLogRepository, ResponseLogRepository
 from src.repositories.message import MessageRepository
 from src.repositories.repository import RepositoryRepository
+from src.repositories.token_usage import TokenUsageRepository
 from src.repositories.user import UserRepository
 from src.services import LoggingService
 from src.services.request_insight import RequestInsightService
@@ -31,6 +32,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 user_repo=UserRepository(session),
                 repo_repo=RepositoryRepository(session),
                 message_repo=MessageRepository(session),
+                token_usage_repo=TokenUsageRepository(session),
             )
             try:
                 await insight_service.extract_and_store(request_log, response_log)
