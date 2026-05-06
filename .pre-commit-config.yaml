@@ -18,7 +18,7 @@ repos:
 
       - id: ruff-check
         name: Ruff Check
-        entry: uv run ruff check --force-exclude
+        entry: uv run ruff check --fix --force-exclude
         # Resolves to the project's local .venv because of `uv run`
         language: system
         types: [ python ]
